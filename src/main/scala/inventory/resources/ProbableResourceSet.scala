@@ -58,11 +58,11 @@ case class ProbableResourceSet(known: ResourceSet[Int], unknown: ResourceSet[Dou
     * @return the total number of resources
     * @see #getAmount(int)
     */
-  val getTotal: Int = getKnownTotal + getUnknownTotal
-
   val getKnownTotal: Int = known.getTotal
 
   val getUnknownTotal: Int =  unknown.getTotal.toInt
+
+  val getTotal: Int = getKnownTotal + getUnknownTotal
 
   /**
     * @return true if this contains at least the resources in other

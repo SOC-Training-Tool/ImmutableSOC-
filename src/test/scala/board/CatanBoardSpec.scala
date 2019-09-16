@@ -17,28 +17,28 @@ class CatanBoardSpec extends FunSpec with Matchers {
 
     describe("should return false when") {
       it("not valid vertex") {
-          singleHexBoard.canBuildSettlement(Vertex(7), 0, true) shouldBe false
+          singleHexBoard.canBuildSettlement(Vertex(7), 0, initialPlacement = true) shouldBe false
       }
 
       it("there already exists a building on that vertex") {
         val board = singleHexBoard.buildSettlement(Vertex(0), 0)
-        board.canBuildSettlement(Vertex(0), 0, true) shouldBe false
+        board.canBuildSettlement(Vertex(0), 0, initialPlacement = true) shouldBe false
       }
 
       it ("a neighboring vertex contains a building") {
         val board = singleHexBoard.buildSettlement(Vertex(1), 0)
-        board.canBuildSettlement(Vertex(0), 0, true) shouldBe false
+        board.canBuildSettlement(Vertex(0), 0, initialPlacement = true) shouldBe false
       }
 
       describe ("not an initial placement") {
 
         it("and no road is adjacent to vertex") {
-           singleHexBoard.canBuildSettlement(Vertex(0), 0, false) shouldBe false
+           singleHexBoard.canBuildSettlement(Vertex(0), 0, initialPlacement = false) shouldBe false
         }
 
         it("and only road is adjacent to vertex is with incorrect playerId") {
           val board = singleHexBoard.buildRoad(Edge(Vertex(0), Vertex(1)), 1)
-          board.canBuildSettlement(Vertex(0), 0, false) shouldBe false
+          board.canBuildSettlement(Vertex(0), 0, initialPlacement = false) shouldBe false
         }
       }
     }
@@ -46,19 +46,19 @@ class CatanBoardSpec extends FunSpec with Matchers {
     describe ("should return true when it is a valid vertex, no neighboring vertex contains a building,") {
 
       it("and it is an initial settlement") {
-        singleHexBoard.canBuildSettlement(Vertex(0), 0, true) shouldBe true
+        singleHexBoard.canBuildSettlement(Vertex(0), 0, initialPlacement =true) shouldBe true
       }
 
       it ("and it is not an initial settlement but there is an adjacent road with the correct playerId ") {
         val board = singleHexBoard.buildRoad(Edge(Vertex(0), Vertex(1)), 0)
-        board.canBuildSettlement(Vertex(0), 0, false) shouldBe true
+        board.canBuildSettlement(Vertex(0), 0, initialPlacement = false) shouldBe true
       }
 
       it("even if there are settlements at least two vertices away") {
         val board = singleHexBoard
           .buildSettlement(Vertex(2), 0)
           .buildSettlement(Vertex(4), 1)
-        board.canBuildSettlement(Vertex(0), 0, true) shouldBe true
+        board.canBuildSettlement(Vertex(0), 0, initialPlacement = true) shouldBe true
       }
     }
   }
@@ -153,13 +153,13 @@ class CatanBoardSpec extends FunSpec with Matchers {
 
     describe("when initial") {
       it("should return all vertices if board is empty") {
-        singleHexBoard.getPossibleSettlements(0, true) should contain allElementsOf(singleHexBoard.vertices)
+        singleHexBoard.getPossibleSettlements(0, initial = true) should contain allElementsOf(singleHexBoard.vertices)
       }
 
       it("should return vertices at least 2 edges away if there is already a settlement on the board") {
         val occupiedVertices = List(5, 0, 1).map(Vertex)
         val board = singleHexBoard.buildSettlement(Vertex(0), 1)
-        board.getPossibleSettlements(0, true) should contain allElementsOf(board.vertices.filterNot(occupiedVertices.contains))
+        board.getPossibleSettlements(0, initial = true) should contain allElementsOf(board.vertices.filterNot(occupiedVertices.contains))
       }
     }
   }

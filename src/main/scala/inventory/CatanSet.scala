@@ -23,7 +23,7 @@ trait CatanSet[A <: InventoryItem, T] {
   }
 
   def add(set: CatanSet[A, T]): CatanSet[A, T] = {
-    set.getTypes.foldLeft(this){ case (newSet: CatanSet[A, T], a: A) => newSet.add(set(a), a) }
+    set.getTypes.foldLeft(this){ case (newSet, a) => newSet.add(set(a), a) }
   }
 
   def subtract(amt: T, a: A): CatanSet[A, T] = {
@@ -35,7 +35,7 @@ trait CatanSet[A <: InventoryItem, T] {
   }
 
   def subtract(set: CatanSet[A, T]): CatanSet[A, T] = {
-    set.getTypes.foldLeft(this){ case (newSet: CatanSet[A, T], a: A) => newSet.subtract(set(a), a) }
+    set.getTypes.foldLeft(this){ case (newSet, a) => newSet.subtract(set(a), a) }
   }
 
   def contains(amt: T, a: A): Boolean = amountMap.get(a).fold(false)(wrapped.gteq(_, amt))
