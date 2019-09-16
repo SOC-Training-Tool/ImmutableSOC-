@@ -2,7 +2,7 @@ package inventory.developmentCard
 
 import core.GameRules
 import inventory.DevelopmentCard
-import inventory.developmentCard.DevCardInventory.{PlayedInventory, UnplayedInventory}
+import inventory.developmentCard.DevCardInventory.{DevelopmentCardSet, PlayedInventory, UnplayedInventory}
 
 case class PossibleDevCardsHands(
   playedDevCards: PlayedInventory = DevCardInventory.empty[Int],
@@ -12,13 +12,13 @@ case class PossibleDevCardsHands(
 
 case class PossibleDevelopmentCards(cards: Map[Int, PossibleDevCardsHands] = Map.empty)(implicit gameRules: GameRules) {
 
-  def apply(player: Int) = cards.get(player).getOrElse(PossibleDevCardsHands())
+  def apply(player: Int): PossibleDevCardsHands = cards.getOrElse(player, PossibleDevCardsHands())
 
-  lazy val knownCards = cards.map { case (_, pdev) =>
+  lazy val knownCards: DevelopmentCardSet[Int] = cards.toSeq.map { case (_, pdev) =>
     pdev.playedDevCards.add(pdev.knownunplayedDevCards)
   }.foldLeft(DevCardInventory.empty[Int])(_.add(_))
 
-  lazy val prob = {
+  lazy val prob: DevelopmentCardSet[Double] = {
     val left = gameRules.initDevCardAmounts.subtract(knownCards)
     DevCardInventory.toInventory(left.amountMap.map { case (card, amt) =>
       card -> amt.toDouble / left.getTotal.toDouble

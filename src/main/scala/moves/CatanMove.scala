@@ -37,6 +37,7 @@ sealed trait ImperfectInformation
   case class BuildCityMove(vertex: Vertex) extends CatanBuildMove with MoveResult
 
   case class PortTradeMove(give: Resources, get: Resources) extends CatanTradeMove with MoveResult
+  case class PlayerTradeMove(to: Int, give: Resources, get: Resources) extends CatanTradeMove with MoveResult
 
   case class TradeMove(playerId: Int, give: Resources, get: CatanResourceSet[Int]) extends CatanTradeMove with ImperfectInformation
   case object AcceptTrade extends TradeResponse

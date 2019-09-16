@@ -33,7 +33,7 @@ case class BoardHex(
 case class Vertex(node: Int)
 case class Edge(v1: Vertex, v2: Vertex) {
 
-  override def canEqual(a: Any) = a.isInstanceOf[Edge]
+  override def canEqual(a: Any): Boolean = a.isInstanceOf[Edge]
 
   override def equals(that: Any): Boolean = that match {
     case e @ Edge(ev1, ev2) =>
@@ -86,7 +86,7 @@ case class CatanBoard private (
 
   def buildCity(vertex: Vertex, playerId: Int): CatanBoard = {
     val city = City(playerId)
-    val vertexMap = (verticesBuildingMap - (vertex)) + (vertex -> city)
+    val vertexMap = (verticesBuildingMap - vertex) + (vertex -> city)
     copy(verticesBuildingMap = vertexMap)
   }
 
@@ -106,7 +106,7 @@ case class CatanBoard private (
   def buildRoad(edge: Edge, playerId: Int): CatanBoard = {
     val road = Road(playerId)
     val edgeMap = edgesBuildingMap + (edge -> road)
-    val roadLen = Seq(roadLengths.get(playerId).getOrElse(0), calcLongestRoadLength(playerId, edge)).max
+    val roadLen = Seq(roadLengths.getOrElse(playerId, 0), calcLongestRoadLength(playerId, edge)).max
     copy(
       edgesBuildingMap = edgeMap,
       roadLengths = roadLengths + (playerId -> roadLen)
@@ -132,14 +132,11 @@ case class CatanBoard private (
 
   def playersOnHex(node: Int): Seq[Int] = {
     hexesWithNodes.find(_.node == node).get.vertices.flatMap { v =>
-      verticesBuildingMap.contains(v) match {
-        case true => Some(verticesBuildingMap(v).playerId)
-        case false => None
-      }
+      verticesBuildingMap.get(v).map(_.playerId)
     }.distinct
   }
 
-  def longestRoadLength(playerId: Int) = roadLengths.get(playerId).getOrElse(0)
+  def longestRoadLength(playerId: Int): Int = roadLengths.getOrElse(playerId, 0)
 
   def getResourcesGainedOnRoll(roll: Int): Map[Int, Resources] = {
     hexesWithNodes.filter {
@@ -156,10 +153,10 @@ case class CatanBoard private (
   }.toMap
 
   def calcLongestRoadLength(playerId: Int): Int = {
-    val roads = edgesBuildingMap.flatMap {
+    val roads = edgesBuildingMap.toSeq.flatMap {
       case (edge, building) if building.playerId == playerId => Seq(edge)
       case _ => Nil
-    }.toSeq
+    }
     calcLongestRoadLength(playerId, roads:_*)
   }
 
@@ -278,17 +275,11 @@ object CatanBoard {
     }.toMap.view.mapValues(_.distinct).toMap
 
     val adjacentHexes: Map[Vertex, Seq[BoardHex]] = vertices.map { vertex =>
-      vertex -> hexesWithNodes.flatMap { hex =>
-        hex.vertices.contains(vertex) match {
-          case true => Seq(hex)
-          case _    => Nil
-        }
-      }
+      vertex -> hexesWithNodes.filter (_.vertices.contains(vertex))
     }.toMap
 
-    val robberHex = hexesWithNodes.find(_.hex.getNumber == None).fold(0)(_.node)
-    val portMap = portMapFunc(ports).map { case (v, port) => Vertex(v) -> port}
-
+    val robberHex = hexesWithNodes.find(_.hex.getNumber.isEmpty).fold(0)(_.node)
+    val portMap = portMapFunc(ports).map[Vertex, Port] { case (v, port) => Vertex(v) -> port}
     CatanBoard(hexesWithNodes, vertices, edges, edgesFromVertex, neighboringVertices, adjacentHexes, portMap, robberHex)
   }
 

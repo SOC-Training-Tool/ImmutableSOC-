@@ -5,6 +5,7 @@ import inventory._
 
 import scala.annotation.tailrec
 import scala.util.Random
+import scala.language.implicitConversions
 
 case class BaseBoardConfiguration(hexes: List[Hex], ports: List[Port]) extends BoardConfiguration
 
@@ -63,7 +64,7 @@ object BaseCatanBoard extends BoardGenerator[BaseBoardConfiguration] {
     Misc -> 4
   )
 
-  val validRolls = Seq(2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12).map(Roll)
+  val validRolls: Seq[Roll] = Seq(2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12).map(Roll)
 
   def apply(hexes: List[Hex], ports: List[Port]): CatanBoard = {
 
@@ -82,8 +83,8 @@ object BaseCatanBoard extends BoardGenerator[BaseBoardConfiguration] {
 
   @tailrec
   override def randomBoard(implicit rand: Random): BaseBoardConfiguration = {
-    val resources = resourceCounts.flatMap {
-      case (resource: Resource, amt) => (1 to amt).map(_ => resource)
+    val resources = resourceCounts.toSeq.flatMap {
+      case (resource, amt) => (1 to amt).map(_ => resource)
     }
 
     val hexes = rand.shuffle {
@@ -93,7 +94,7 @@ object BaseCatanBoard extends BoardGenerator[BaseBoardConfiguration] {
       }.toList
     }
     val ports = rand.shuffle {
-      portCounts.flatMap {
+      portCounts.toSeq.flatMap {
         case (port: Port, amt) => (1 to amt).map(_ => port)
       }.toList
     }
@@ -103,128 +104,5 @@ object BaseCatanBoard extends BoardGenerator[BaseBoardConfiguration] {
     else randomBoard
   }
 
-//  private def assignNeighbors(hexesWithNodes: Seq[BoardHex]): Unit = {
-//    hexesWithNodes(0).sw = Some(hexesWithNodes(11))
-//    hexesWithNodes(0).se = Some(hexesWithNodes(1))
-//    hexesWithNodes(0).s = Some(hexesWithNodes(12))
-//
-//    hexesWithNodes(1).nw = Some(hexesWithNodes(0))
-//    hexesWithNodes(1).sw = Some(hexesWithNodes(12))
-//    hexesWithNodes(1).s = Some(hexesWithNodes(13))
-//    hexesWithNodes(1).se = Some(hexesWithNodes(2))
-//
-//    hexesWithNodes(2).nw = Some(hexesWithNodes(1))
-//    hexesWithNodes(2).sw = Some(hexesWithNodes(13))
-//    hexesWithNodes(2).s = Some(hexesWithNodes(3))
-//
-//    hexesWithNodes(3).n = Some(hexesWithNodes(2))
-//    hexesWithNodes(3).nw = Some(hexesWithNodes(13))
-//    hexesWithNodes(3).nw = Some(hexesWithNodes(14))
-//    hexesWithNodes(3).sw = Some(hexesWithNodes(4))
-//
-//    hexesWithNodes(4).n = Some(hexesWithNodes(3))
-//    hexesWithNodes(4).nw = Some(hexesWithNodes(14))
-//    hexesWithNodes(4).sw = Some(hexesWithNodes(5))
-//
-//    hexesWithNodes(5).ne = Some(hexesWithNodes(4))
-//    hexesWithNodes(5).n = Some(hexesWithNodes(14))
-//    hexesWithNodes(5).nw = Some(hexesWithNodes(15))
-//    hexesWithNodes(5).sw = Some(hexesWithNodes(6))
-//
-//    hexesWithNodes(6).ne = Some(hexesWithNodes(5))
-//    hexesWithNodes(6).n = Some(hexesWithNodes(15))
-//    hexesWithNodes(6).nw = Some(hexesWithNodes(7))
-//
-//    hexesWithNodes(7).se = Some(hexesWithNodes(6))
-//    hexesWithNodes(7).ne = Some(hexesWithNodes(15))
-//    hexesWithNodes(7).n = Some(hexesWithNodes(16))
-//    hexesWithNodes(7).nw = Some(hexesWithNodes(8))
-//
-//    hexesWithNodes(8).se = Some(hexesWithNodes(7))
-//    hexesWithNodes(8).ne = Some(hexesWithNodes(16))
-//    hexesWithNodes(8).n = Some(hexesWithNodes(9))
-//
-//    hexesWithNodes(9).s = Some(hexesWithNodes(8))
-//    hexesWithNodes(9).se = Some(hexesWithNodes(16))
-//    hexesWithNodes(9).ne = Some(hexesWithNodes(17))
-//    hexesWithNodes(9).n = Some(hexesWithNodes(10))
-//
-//    hexesWithNodes(10).s = Some(hexesWithNodes(9))
-//    hexesWithNodes(10).se = Some(hexesWithNodes(17))
-//    hexesWithNodes(10).ne = Some(hexesWithNodes(11))
-//
-//    hexesWithNodes(11).sw = Some(hexesWithNodes(10))
-//    hexesWithNodes(11).s = Some(hexesWithNodes(17))
-//    hexesWithNodes(11).se = Some(hexesWithNodes(12))
-//    hexesWithNodes(11).ne = Some(hexesWithNodes(0))
-//
-//    hexesWithNodes(12).n = Some(hexesWithNodes(0))
-//    hexesWithNodes(12).ne = Some(hexesWithNodes(1))
-//    hexesWithNodes(12).se = Some(hexesWithNodes(13))
-//    hexesWithNodes(12).s = Some(hexesWithNodes(18))
-//    hexesWithNodes(12).sw = Some(hexesWithNodes(17))
-//    hexesWithNodes(12).nw = Some(hexesWithNodes(11))
-//
-//    hexesWithNodes(13).n = Some(hexesWithNodes(1))
-//    hexesWithNodes(13).ne = Some(hexesWithNodes(2))
-//    hexesWithNodes(13).se = Some(hexesWithNodes(3))
-//    hexesWithNodes(13).s = Some(hexesWithNodes(14))
-//    hexesWithNodes(13).sw = Some(hexesWithNodes(18))
-//    hexesWithNodes(13).nw = Some(hexesWithNodes(12))
-//
-//    hexesWithNodes(14).n = Some(hexesWithNodes(13))
-//    hexesWithNodes(14).ne = Some(hexesWithNodes(3))
-//    hexesWithNodes(14).se = Some(hexesWithNodes(4))
-//    hexesWithNodes(14).s = Some(hexesWithNodes(5))
-//    hexesWithNodes(14).sw = Some(hexesWithNodes(17))
-//    hexesWithNodes(14).nw = Some(hexesWithNodes(18))
-//
-//    hexesWithNodes(15).n = Some(hexesWithNodes(18))
-//    hexesWithNodes(15).ne = Some(hexesWithNodes(14))
-//    hexesWithNodes(15).se = Some(hexesWithNodes(5))
-//    hexesWithNodes(15).s = Some(hexesWithNodes(6))
-//    hexesWithNodes(15).sw = Some(hexesWithNodes(7))
-//    hexesWithNodes(15).nw = Some(hexesWithNodes(16))
-//
-//    hexesWithNodes(16).n = Some(hexesWithNodes(17))
-//    hexesWithNodes(16).ne = Some(hexesWithNodes(18))
-//    hexesWithNodes(16).se = Some(hexesWithNodes(15))
-//    hexesWithNodes(16).s = Some(hexesWithNodes(7))
-//    hexesWithNodes(16).sw = Some(hexesWithNodes(8))
-//    hexesWithNodes(16).nw = Some(hexesWithNodes(9))
-//
-//    hexesWithNodes(17).n = Some(hexesWithNodes(11))
-//    hexesWithNodes(17).ne = Some(hexesWithNodes(12))
-//    hexesWithNodes(17).se = Some(hexesWithNodes(18))
-//    hexesWithNodes(17).s = Some(hexesWithNodes(16))
-//    hexesWithNodes(17).sw = Some(hexesWithNodes(9))
-//    hexesWithNodes(17).nw = Some(hexesWithNodes(10))
-//
-//    hexesWithNodes(18).n = Some(hexesWithNodes(12))
-//    hexesWithNodes(18).ne = Some(hexesWithNodes(13))
-//    hexesWithNodes(18).se = Some(hexesWithNodes(14))
-//    hexesWithNodes(18).s = Some(hexesWithNodes(15))
-//    hexesWithNodes(18).sw = Some(hexesWithNodes(16))
-//    hexesWithNodes(18).nw = Some(hexesWithNodes(17))
-//
-//  }
-//
-//  private def checkValid(hexesWithNodes: Seq[BoardHex]): Unit = {
-//    hexesWithNodes.foreach { boardHex =>
-//      boardHex.hex.getNumber
-//        .filter(r => r.number == 6 || r.number == 8)
-//        .foreach { n1: core.Roll =>
-//          boardHex.neighborHexMap.filter { case (_, neighborHex) =>
-//            neighborHex.isDefined
-//          }.map { case (_, neighborOpt) =>
-//            neighborOpt.get.hex.getNumber
-//          }.filter(_.isDefined).map(_.get)
-//            .filter(r => r.number == 6 || r.number == 8)
-//            .foreach { n2: core.Roll =>
-//              throw new Exception(s"Cannot have rolls ${n1.number} and ${n2.number} next to each other")
-//            }
-//        }
-//    }
-//  }
   implicit override def apply(config: BaseBoardConfiguration): CatanBoard = apply(config.hexes, config.ports)
 }
