@@ -2,7 +2,7 @@
 *.log
 
 target/*
-project/*
+project/target/*
 .idea/*
 
 *.DS_Store

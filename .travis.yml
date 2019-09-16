@@ -3,6 +3,9 @@ language: scala
 scala:
   - 2.13.0
 
-script:
-  - sbt clean compile
-  - sbt test
+jobs:
+  include:
+    - stage: compile
+      script: sbt clean compile
+    - stage: test
+      script: sbt test
