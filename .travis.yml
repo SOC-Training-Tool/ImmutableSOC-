@@ -1,0 +1,20 @@
+language: scala
+
+scala:
+  - 2.13.0
+
+script:
+  - sbt clean compile
+  - sbt test 
+
+
+
+
+
+
+
+
+
+
+
+
