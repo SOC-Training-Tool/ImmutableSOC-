@@ -5,16 +5,4 @@ scala:
 
 script:
   - sbt clean compile
-  - sbt test 
-
-
-
-
-
-
-
-
-
-
-
-
+  - sbt test
