@@ -1,8 +1,10 @@
 *.class
 *.log
 
+ci/secring.asc
 target/*
 project/target/*
+project/project/*
 .idea/*
 
 *.DS_Store
