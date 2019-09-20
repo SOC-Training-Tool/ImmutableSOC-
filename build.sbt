@@ -19,6 +19,7 @@ developers := List(
   )
 )
 
+
 pomIncludeRepository := { _ => false }
 publishTo := {
   val nexus = "https://oss.sonatype.org/"
@@ -27,8 +28,6 @@ publishTo := {
 }
 publishMavenStyle := true
 
-dynverSonatypeSnapshots in ThisBuild := true
-
-//pgpPublicRing := file("ci/pubring.asc")
-//pgpSecretRing := file("ci/secring.asc")
-//pgpPassphrase := sys.env.get("PGP_PASSPHRASE").map(_.toArray)
+pgpPublicRing := file("ci/pubring.asc")
+pgpSecretRing := file("ci/secring.asc")
+pgpPassphrase := sys.env.get("PGP_PASSPHRASE").map(_.toArray)

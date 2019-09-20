@@ -8,7 +8,7 @@ jobs:
   - stage: test
     script: sbt test
   - stage: deploy
-    if: tag =~ ^v 
+    if: branch = master
     script: sbt publishSigned sonatypeRelease
 cache:
   directories:
