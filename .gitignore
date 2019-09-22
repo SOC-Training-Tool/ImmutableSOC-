@@ -1,7 +1,7 @@
 *.class
 *.log
 
-ci/secring.asc
+local.*
 target/*
 project/target/*
 project/project/*

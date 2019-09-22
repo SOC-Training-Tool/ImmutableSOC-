@@ -3,13 +3,8 @@ scala:
 - 2.13.0
 jobs:
   include:
-  - stage: compile
-    script: sbt clean compile
   - stage: test
-    script: sbt test
-  - stage: deploy
-    if: tag =~ ^v
-    script: sbt publishSigned sonatypeRelease
+    script: sbt ++$TRAVIS_SCALA_VERSION test
 cache:
   directories:
   - "$HOME/.ivy2/cache"
@@ -24,5 +19,10 @@ env:
   - secure: sBxqY7EYFvQhusjEkOse+2Bk5n1c2tBqoGEjaMA4xGh1n3Qs/TE1kwJvVh56VlBhb+i8v49JEtwEDEPIz17VDctTdlX02Ac0OBfH9rwl93Gcw9iaFi8Vol6rx4HcFb9DFNTn0Mrywt1iR/4RuBf4S4UAMQYfJclMr3XbfGsplCwu6YIV+2obL6gTMbH/afIJWFPpcDptkh97qVBjTaP/47MPFlD+fCZHu+qprfeYS3rb5/d1voTz+J9ni4zZjdTwMb0D4KylArPfCV0zgk2Bza77IgVpGUWu5GrnpNdHb6/zyzUlwj+Ob0gSVDso0fsHc5AKcgOYRK5j3U1UDFmfY737d3GtN+7zN0hrkj5Awv4+PiJ+wWy7j2ZftBKlXYILoIlLY7hBZIojYp4iJ3pY4FMu3fzAKqx24STQiTXCMoN0/rTG9/gNQJhqyY6xC8LyFAYCW0zEkR4OFkYYSkclhC8wn5rdzHmLiwgwSrvAs9+1GbVeyAwr8YWvpgAqYTpofgW2rDskS9PGggtglg3Oua56yQT3PhON1D9ankLJ32S3xfveCtKEnqMC85puMLtw5nQDMwiS86smXhv4Jox9y/wIehnldBj4ajzAK18cuSBAwogseROjWySJZ6DAaavlgX3MwQay8Flr1/JvaTMYrHfKfcFIJo4pNmpjY7Gf60c=
   - secure: cJppW4ZVVJdfriTJHBg11kEc+4vCBWdQ4XOa+9KzekRTTE4X3HgAyB0gx+pKFT1+eu1xYXCSCasz3N4xw3JQRR3y8oeKwveGr13kuk+OFQK5kBRTu/m82gfLOShAXYG3TAnCtjKC2/exjYRxCHF0y7EbhzTbMb60xF6FqF3yDHj5YsHySxWSs81uESUJrnTZMFpFYTVJe/mYdi4YK4Rs1PMR/+qxDe1OQc4RBNFQcFFQL4EZr8fJjbojoHJRWgYsyDtVQKHniQpRKHqS9Q1/UA87zvqVYEoUfweUKWWTrFnAK/EUlsxZRKAm1kfS6zIXBc/uBtHLEP65LOFvgvRFvOIb0FSaxv8uQAVUv5bJbaYC3eduIKdzCvuVnXwWqL3/boR8/H/M3YrqgHSWCDkMSWovgcBPYxiVZzs/B+YeEe8bvikcNsdVi31P1R8kBPUXqLq6ooywTJs/vuifIWbafsxpKpUvGC1aeubRtAZ+wHU4TxD/A2Gb+c/RbB4xf1bBF7YnEY/7JTJKo30GP7+m/+EYwM8jBK3iQKdqvgUKKf9s5L0nF3P4U/hufMjC7vgnD925nlUHfwqd9sF0ldX2Ai1zNAy3OarxbuhzNcb5x/43Z1K2XFacZ/7RcT3/18sKJMDddqU3NwgpmNqBq9bZQjKdAtnlqia3Aam6xeb6Y4o=
 before_install:
-- openssl aes-256-cbc -K $encrypted_5eaf5e1c6bb6_key -iv $encrypted_5eaf5e1c6bb6_iv
-  -in ci/secring.asc.enc -out ci/secring.asc -d
+  - if [ $TRAVIS_PULL_REQUEST = 'false' ]; then
+    openssl aes-256-cbc -K $encrypted_474c3e42cec4_key -iv $encrypted_474c3e42cec4_iv -in travis/secrets.tar.enc -out travis/secrets.tar -d;
+    tar xv -C travis -f travis/secrets.tar;
+    fi
+after_success:
+  - if [ $TRAVIS_PULL_REQUEST = 'false' ]; then sbt ++$TRAVIS_SCALA_VERSION releaseEarly;
+    fi
