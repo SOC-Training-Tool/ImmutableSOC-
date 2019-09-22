@@ -15,6 +15,7 @@ inThisBuild(List(
   // These are the sbt-release-early settings to configure
   pgpPublicRing := file("./travis/local.pubring.asc"),
   pgpSecretRing := file("./travis/local.secring.asc"),
+  pgpPassphrase := sys.env.get("PGP_PASSPHRASE").map(_.toArray),
   releaseEarlyWith := SonatypePublisher
 ))
 
@@ -22,4 +23,3 @@ inThisBuild(List(
 
 //pgpPublicRing := file("./travis/local.pubring.asc")
 //pgpSecretRing := file("./travis/local.secring.asc")
-//pgpPassphrase := sys.env.get("PGP_PASSPHRASE").map(_.toArray)
