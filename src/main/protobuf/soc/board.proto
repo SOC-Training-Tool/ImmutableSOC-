@@ -1,0 +1,67 @@
+syntax = "proto2";
+
+package protos.soc;
+
+message Hex {
+    enum Resource {
+        BRICK = 0;
+        ORE = 1;
+        SHEEP = 2;
+        WHEAT = 3;
+        WOOD = 4;
+        DESERT = 5;
+    }
+    required string id = 1;
+    required Resource resource = 2;
+    optional int32 number = 3;
+    repeated Vertex adjacentVertices = 4;
+}
+
+message Vertex {
+    required string id = 1;
+}
+
+message Edge {
+    required Vertex v1 = 1;
+    required Vertex v2 = 2;
+}
+
+message Port {
+    enum PortType {
+        BRICK = 0;
+        ORE = 1;
+        SHEEP = 2;
+        WHEAT = 3;
+        WOOD = 4;
+        MISC = 5;
+    }
+    required PortType portType = 1;
+    required Edge edge = 2;
+}
+
+message VertexBuilding {
+    enum BuildingType {
+        SETTLEMENT = 0;
+        CITY = 1;
+    }
+    required BuildingType buildingType = 1;
+    required Vertex vertex = 2;
+    required int32 playerPos = 3;
+}
+
+message EdgeBuilding {
+    enum BuildingType {
+        ROAD = 0;
+    }
+    required BuildingType buildingType = 1;
+    required Edge edge = 2;
+    required int32 playerPos = 3;
+}
+
+message Board {
+    repeated Hex hexes = 1;
+    repeated Port ports = 2;
+    required Hex robberHex = 3;
+    repeated VertexBuilding vertexBuildings = 4;
+    repeated EdgeBuilding edgeBuildings = 5;
+}

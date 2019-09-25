@@ -1,5 +1,5 @@
 
-import inventory.DevelopmentCard
+import soc.inventory.DevelopmentCard
 
 import scala.util.Random
 

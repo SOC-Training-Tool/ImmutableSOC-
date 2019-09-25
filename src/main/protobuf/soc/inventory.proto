@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package protos.soc;
+
+enum Resource {
+    UNKNOWN_R = 0;
+    BRICK = 1;
+    ORE = 2;
+    SHEEP = 3;
+    WHEAT = 4;
+    WOOD = 5;
+}
+
+enum DevelopmentCard {
+    UNKNOWN_D = 0;
+    KNIGHT = 1;
+    YEAR_OF_PLENTY = 2;
+    MONOPOLY = 3;
+    ROAD_BUILDER = 4;
+    POINT = 5;
+}
+
+message ResourceSet {
+    repeated Resource resourceCards = 1;
+}
+
+message DevelopmentCardSet {
+    repeated DevelopmentCard developmentCards = 1;
+}
+
+message ProbableResourceSet {
+    message ProbableCardValue {
+        Resource resType = 1;
+        int32 knownAmount = 2;
+        double unknownAmount = 3;
+    }
+    repeated ProbableCardValue probableResourceCards = 1;
+}
+
+message PossibleHands {
+
+    message HandCombination {
+        message HandsWithMultiplier {
+            ResourceSet cards = 1;
+            int32 multiplier = 2;
+        }
+        map<int32, HandsWithMultiplier> hand = 1;
+    }
+    repeated HandCombination hand = 1;
+}
+
+

@@ -1,0 +1,19 @@
+syntax = "proto2";
+
+package protos.soc;
+
+import "soc/board.proto";
+import "soc/inventory.proto";
+import "soc/playerState.proto";
+
+message GameState {
+    required Board board = 1;
+    repeated PlayerState playerStates = 2;
+    required int32 developmentCardsInDeck = 3;
+    required int32 currentTurn = 4;
+    required bool canRollDice = 5;
+    required bool canPlayCard = 6;
+    required ResourceSet bank = 7;
+    optional DevelopmentCardSet developmentCardDeck = 8;
+    optional PossibleHands possibleHands = 9;
+}
