@@ -1,6 +1,6 @@
-import board._
-import core.Roll
-import inventory._
+import soc.board._
+import soc.core.Roll
+import soc.inventory._
 
 object CatanFixtures {
 
