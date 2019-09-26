@@ -1,9 +1,8 @@
-syntax = "proto3";
+syntax = "proto2";
 
 package protos.soc;
 
 enum Resource {
-    UNKNOWN_R = 0;
     BRICK = 1;
     ORE = 2;
     SHEEP = 3;
@@ -12,7 +11,6 @@ enum Resource {
 }
 
 enum DevelopmentCard {
-    UNKNOWN_D = 0;
     KNIGHT = 1;
     YEAR_OF_PLENTY = 2;
     MONOPOLY = 3;
@@ -21,32 +19,53 @@ enum DevelopmentCard {
 }
 
 message ResourceSet {
-    repeated Resource resourceCards = 1;
+    repeated Resource resource_cards = 1;
 }
 
 message DevelopmentCardSet {
-    repeated DevelopmentCard developmentCards = 1;
+    repeated DevelopmentCard development_cards = 1;
 }
 
 message ProbableResourceSet {
     message ProbableCardValue {
-        Resource resType = 1;
-        int32 knownAmount = 2;
-        double unknownAmount = 3;
+        required Resource res_type = 1;
+        required int32 known_amount = 2;
+        required double unknown_amount = 3;
     }
-    repeated ProbableCardValue probableResourceCards = 1;
+    repeated ProbableCardValue probable_resource_cards = 1;
 }
 
 message PossibleHands {
 
     message HandCombination {
         message HandsWithMultiplier {
-            ResourceSet cards = 1;
-            int32 multiplier = 2;
+            required ResourceSet cards = 1;
+            required int32 multiplier = 2;
         }
         map<int32, HandsWithMultiplier> hand = 1;
     }
-    repeated HandCombination hand = 1;
+    repeated HandCombination hands = 1;
 }
+
+message PublicInventory {
+    required int32 num_cards = 1;
+    required int32 num_development_cards = 2;
+    required DevelopmentCardSet played_dev_cards = 3;
+}
+
+message PerfectInventory {
+    required ResourceSet resource_cards = 1;
+    required DevelopmentCardSet played_dev_cards = 2;
+    required DevelopmentCardSet can_play_dev_cards = 3;
+    required DevelopmentCardSet cannot_play_dev_cards = 4;
+}
+
+message ProbableInventory {
+    required ProbableResourceSet probable_resource_cards = 1;
+    required DevelopmentCardSet played_dev_cards = 2;
+    //TODO Add ProbableDevelopment cards
+}
+
+
 
 

@@ -14,7 +14,7 @@ message Hex {
     required string id = 1;
     required Resource resource = 2;
     optional int32 number = 3;
-    repeated Vertex adjacentVertices = 4;
+    repeated Vertex adjacent_vertices = 4;
 }
 
 message Vertex {
@@ -35,7 +35,7 @@ message Port {
         WOOD = 4;
         MISC = 5;
     }
-    required PortType portType = 1;
+    required PortType port_type = 1;
     required Edge edge = 2;
 }
 
@@ -44,24 +44,24 @@ message VertexBuilding {
         SETTLEMENT = 0;
         CITY = 1;
     }
-    required BuildingType buildingType = 1;
+    required BuildingType building_type = 1;
     required Vertex vertex = 2;
-    required int32 playerPos = 3;
+    required int32 player_position = 3;
 }
 
 message EdgeBuilding {
     enum BuildingType {
         ROAD = 0;
     }
-    required BuildingType buildingType = 1;
+    required BuildingType building_type = 1;
     required Edge edge = 2;
-    required int32 playerPos = 3;
+    required int32 player_position = 3;
 }
 
 message Board {
     repeated Hex hexes = 1;
     repeated Port ports = 2;
-    required Hex robberHex = 3;
-    repeated VertexBuilding vertexBuildings = 4;
-    repeated EdgeBuilding edgeBuildings = 5;
+    required Hex robber_hex = 3;
+    repeated VertexBuilding vertex_buildings = 4;
+    repeated EdgeBuilding edge_buildings = 5;
 }

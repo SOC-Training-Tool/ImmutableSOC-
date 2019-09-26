@@ -15,10 +15,11 @@ class ProbableResourceSet(known: ResourceSet[Int], unknown: ResourceSet[Double])
     */
   def getKnownAmount(resourceType: Resource): Int = known.getAmount(resourceType)
 
-  def getProbableAmount(resourceType: Resource): Double = unknown.getAmount(resourceType)
+  def getUnknownAmount(resourceType: Resource): Double = unknown.getAmount(resourceType)
 
   override def getAmount(resourceType: Resource): Double = getKnownAmount(resourceType) + getProbableAmount(resourceType)
 
+  def getProbableAmount(resourceType: Resource): Double = (getKnownAmount(resourceType) + getUnknownAmount(resourceType)) / getTotal
 
   /**
     * Does the set contain any resources of this type?
@@ -34,7 +35,7 @@ class ProbableResourceSet(known: ResourceSet[Int], unknown: ResourceSet[Double])
 
   def probabilityContains(resourceType: Resource): Double = {
     if (contains(resourceType)) 1.0
-    else getProbableAmount(resourceType) / getTotal
+    else getUnknownAmount(resourceType) / getTotal
   }
 
   def getProbabilityOfResourceInHand(resourceType: Resource): Double = getAmount(resourceType) / getTotal

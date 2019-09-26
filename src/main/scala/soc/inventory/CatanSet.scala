@@ -59,6 +59,10 @@ trait CatanSet[A <: InventoryItem, T, U <: CatanSet[A, T, U]] {
 
 object CatanSet {
 
-  def toList[A <: InventoryItem, U <: CatanSet[A, Int, U]](set: U): List[A] = set.amountMap.toList.flatMap { case (a, amt) => (1 to amt).map(_ => a)}
+  def toList[A <: InventoryItem, U <: CatanSet[A, Int, U]](set: CatanSet[A, Int, U]): Seq[A] = set.amountMap.toList.flatMap { case (a, amt) => (1 to amt).map(_ => a)}
+  def fromList[A <: InventoryItem, U <: CatanSet[A, Int, U]](list: Seq[A])(implicit e: Empty[A, Int, U]): U = list.foldLeft(e.empty){case (set, a) => set.add(1, a)}
+}
 
+trait Empty[A <: InventoryItem, T, U <: CatanSet[A, T, U]] {
+  def empty(): U
 }

@@ -1,6 +1,8 @@
 package soc.inventory.developmentCard
 
 import soc.inventory._
+import soc.inventory.resources.CatanResourceSet
+import soc.inventory.resources.CatanResourceSet.empty
 
 import scala.util.Random
 
@@ -24,6 +26,8 @@ object DevelopmentCardSet {
   type PlayedInventory = DevelopmentCardSet[Int]
   type UnplayedInventory = DevelopmentCardSet[Double]
 
+  implicit val emptyBuilderInt: Empty[DevelopmentCard, Int, DevelopmentCardSet[Int]] = { () => empty[Int] }
+  implicit val emptyBuilderDouble: Empty[DevelopmentCard, Double, DevelopmentCardSet[Double]] = () => empty[Double]
 
   def empty[T: Numeric]: DevelopmentCardSet[T] = {
     val num = implicitly[Numeric[T]]

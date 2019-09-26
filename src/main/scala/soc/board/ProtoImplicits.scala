@@ -8,16 +8,16 @@ import soc.proto.ProtoCoder.ops._
 
 object ProtoImplicits {
 
-  implicit def protoBoard[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[CatanBoard, PBoard] = board => {
+  implicit def protoBoard[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[CatanBoard, PBoard] = { board =>
     val hexes = board.hexesWithNodes.map(_.proto)
     val ports = board.portMap.toSeq.map(_.proto)
+    val robberHex = hexes.find(_.id == boardMapping.hexMapping(board.robberHex)).get
     val vertexBuildings = board.verticesBuildingMap.toSeq.map { _.proto }
     val edgeBuildings = board.edgesBuildingMap.toSeq.map { _.proto }
-    val robberHex = hexes.find(_.id == boardMapping.hexMapping(board.robberHex)).get
     PBoard(hexes, ports, robberHex, vertexBuildings, edgeBuildings)
   }
 
-  implicit def boardFromProto[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[PBoard, CatanBoard] = protoBoard => {
+  implicit def boardFromProto[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[PBoard, CatanBoard] = { protoBoard =>
     val hexes = protoBoard.hexes.map(_.proto)
     val portMap = protoBoard.ports.map(_.proto).toMap
     val robberHex = protoBoard.robberHex.proto.node
@@ -26,7 +26,7 @@ object ProtoImplicits {
     CatanBoard(hexes, portMap, robberHex, vertexBuildings, edgeBuildings)
   }
 
-  implicit def protoHex[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[BoardHex, PHex] = boardHex => {
+  implicit def protoHex[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[BoardHex, PHex] = { boardHex =>
     val id = boardMapping.hexMapping(boardHex.node)
     val adjacentVertices = boardHex.vertices.map(_.proto)
     boardHex.hex.getResourceAndNumber.fold(PHex(id, PHex.Resource.DESERT, None, adjacentVertices)) { case (res, roll) =>
@@ -41,7 +41,7 @@ object ProtoImplicits {
     }
   }
 
-  implicit def hexFromProto[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[PHex, BoardHex] = protoHex => {
+  implicit def hexFromProto[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[PHex, BoardHex] = { protoHex =>
     val node = boardMapping.reverseHexMapping(protoHex.id)
     val roll = protoHex.number.map(Roll)
     val hex = protoHex.resource match {
@@ -56,28 +56,27 @@ object ProtoImplicits {
     BoardHex(node, hex, adjacentVertices)
   }
 
-
-  implicit def protoPort[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[(Edge, Port), PPort] = p => {
+  implicit def protoPort[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[(Edge, Port), PPort] = { p =>
     val (edge, port) = p
     val portType = port match {
-      case Brick => protos.soc.board.Port.PortType.BRICK
-      case Ore => protos.soc.board.Port.PortType.ORE
-      case Sheep => protos.soc.board.Port.PortType.SHEEP
-      case Wheat => protos.soc.board.Port.PortType.WHEAT
-      case Wood => protos.soc.board.Port.PortType.WOOD
-      case Misc => protos.soc.board.Port.PortType.MISC
+      case Brick => PPort.PortType.BRICK
+      case Ore => PPort.PortType.ORE
+      case Sheep => PPort.PortType.SHEEP
+      case Wheat => PPort.PortType.WHEAT
+      case Wood => PPort.PortType.WOOD
+      case Misc => PPort.PortType.MISC
     }
     PPort(portType, edge.proto)
   }
 
-  implicit def portFromProto[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[PPort, (Edge, Port)] = protoPort => {
+  implicit def portFromProto[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[PPort, (Edge, Port)] = { protoPort =>
     val portType = protoPort.portType match {
-      case protos.soc.board.Port.PortType.BRICK => Brick
-      case protos.soc.board.Port.PortType.ORE => Ore
-      case protos.soc.board.Port.PortType.SHEEP => Sheep
-      case protos.soc.board.Port.PortType.WHEAT => Wheat
-      case protos.soc.board.Port.PortType.WOOD => Wood
-      case protos.soc.board.Port.PortType.MISC => Misc
+      case PPort.PortType.BRICK => Brick
+      case PPort.PortType.ORE => Ore
+      case PPort.PortType.SHEEP => Sheep
+      case PPort.PortType.WHEAT => Wheat
+      case PPort.PortType.WOOD => Wood
+      case PPort.PortType.MISC => Misc
     }
     (protoPort.edge.proto, portType)
   }
@@ -87,7 +86,7 @@ object ProtoImplicits {
   implicit def protoEdge[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[Edge, PEdge] = edge => PEdge(edge.v1.proto, edge.v2.proto)
   implicit def edgeFromProto[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[PEdge, Edge] = protoEdge => Edge(protoEdge.v1.proto, protoEdge.v2.proto)
 
-  implicit def protoVertexBuilding[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[(Vertex, VertexBuilding), PVertexBuilding] = vVertexBuilding => {
+  implicit def protoVertexBuilding[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[(Vertex, VertexBuilding), PVertexBuilding] = { vVertexBuilding =>
     val (vertex, vertexBuilding) = vVertexBuilding
     vertexBuilding match {
       case Settlement(p) => PVertexBuilding(PVertexBuilding.BuildingType.SETTLEMENT, vertex.proto, p)
@@ -95,23 +94,23 @@ object ProtoImplicits {
     }
   }
 
-  implicit def vertexBuildingFromProto[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[PVertexBuilding, (Vertex, VertexBuilding)] = protoVertexBuilding => {
+  implicit def vertexBuildingFromProto[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[PVertexBuilding, (Vertex, VertexBuilding)] = { protoVertexBuilding =>
     protoVertexBuilding.buildingType match {
-      case PVertexBuilding.BuildingType.SETTLEMENT => (protoVertexBuilding.vertex.proto, Settlement(protoVertexBuilding.playerPos))
-      case PVertexBuilding.BuildingType.CITY => (protoVertexBuilding.vertex.proto, City(protoVertexBuilding.playerPos))
+      case PVertexBuilding.BuildingType.SETTLEMENT => (protoVertexBuilding.vertex.proto, Settlement(protoVertexBuilding.playerPosition))
+      case PVertexBuilding.BuildingType.CITY => (protoVertexBuilding.vertex.proto, City(protoVertexBuilding.playerPosition))
     }
   }
 
-  implicit def protoEdgeBuilding[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[(Edge, EdgeBuilding), PEdgeBuilding] = eEdgeBuilding => {
+  implicit def protoEdgeBuilding[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[(Edge, EdgeBuilding), PEdgeBuilding] = { eEdgeBuilding =>
     val (edge, edgeBuilding) = eEdgeBuilding
     edgeBuilding match {
       case Road(p) => PEdgeBuilding(PEdgeBuilding.BuildingType.ROAD, edge.proto, p)
     }
   }
 
-  implicit def edgeBuildingFromProto[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[PEdgeBuilding, (Edge, EdgeBuilding)] = protoEdgeBuilding => {
+  implicit def edgeBuildingFromProto[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[PEdgeBuilding, (Edge, EdgeBuilding)] = { protoEdgeBuilding =>
     protoEdgeBuilding.buildingType match {
-      case PEdgeBuilding.BuildingType.ROAD => (protoEdgeBuilding.edge.proto, Road(protoEdgeBuilding.playerPos))
+      case PEdgeBuilding.BuildingType.ROAD => (protoEdgeBuilding.edge.proto, Road(protoEdgeBuilding.playerPosition))
     }
   }
 }

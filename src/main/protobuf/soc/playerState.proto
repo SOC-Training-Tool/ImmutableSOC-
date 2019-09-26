@@ -4,33 +4,19 @@ package protos.soc;
 
 import "soc/inventory.proto";
 
-message PublicInventory {
-    required int32 numCards = 4;
-    required int32 numDevelopmentCards = 5;
-}
-
-message PerfectInventory {
-    required ResourceSet resourceCards = 1;
-    required DevelopmentCardSet playedDevCards = 2;
-    required DevelopmentCardSet canPlayDevCards = 3;
-    required DevelopmentCardSet cannotPlayDevCards = 4;
-}
-
-message ProbableInventory {
-    required ProbableResourceSet probableResourceCards = 1;
-    required DevelopmentCardSet playedDevCards = 2;
-    //TODO Add ProbableDevelopment cards
+message Player {
+    required string name = 1;
+    required int32 position = 2;
 }
 
 message PlayerState {
-    required string name = 1;
-    required int32 position = 2;
-    required int32 numPoints = 3;
-    required int32 numRoads = 4;
-    required int32 numKnights = 5;
-    required bool hasLongest = 6;
-    required bool hasLargest = 7;
-    required PublicInventory public = 8;
-    optional PerfectInventory perfect = 9;
-    optional ProbableInventory probable = 10;
+    required Player player = 1;
+    required int32 num_points = 2;
+    required int32 num_roads = 3;
+    required int32 num_knights = 4;
+    required bool has_longest = 5;
+    required bool has_largest = 6;
+    required PublicInventory public = 7;
+    optional PerfectInventory perfect = 8;
+    optional ProbableInventory probable = 9;
 }

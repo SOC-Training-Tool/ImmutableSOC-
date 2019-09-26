@@ -22,6 +22,9 @@ object CatanResourceSet {
   type ResourceSet[S] = CatanResourceSet[S]
   type Resources = ResourceSet[Int]
 
+  implicit val emptyBuilderInt: Empty[Resource, Int, CatanResourceSet[Int]] = () => empty[Int]
+  implicit val emptyBuilderDouble: Empty[Resource, Double, CatanResourceSet[Double]] = () => empty[Double]
+
   def empty[T: Numeric]: ResourceSet[T] = {
     val num = implicitly[Numeric[T]]
     CatanResourceSet[T](num.zero, num.zero, num.zero, num.zero, num.zero)
