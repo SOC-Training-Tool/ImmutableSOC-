@@ -11,9 +11,13 @@ message Hex {
         WOOD = 4;
         DESERT = 5;
     }
+    message HexProbability {
+        required int32 number = 1;
+        required int32 dots = 2;
+    }
     required string id = 1;
     required Resource resource = 2;
-    optional int32 number = 3;
+    optional HexProbability hex_probability = 3;
     repeated Vertex adjacent_vertices = 4;
 }
 

@@ -2,10 +2,10 @@ package soc.inventory.developmentCard
 
 import soc.core.GameRules
 import soc.inventory.DevelopmentCard
-import soc.inventory.developmentCard.DevelopmentCardSet.{PlayedInventory, UnplayedInventory}
+import soc.inventory.developmentCard.DevelopmentCardSet._
 
 case class PossibleDevCardsHands(
-  playedDevCards: PlayedInventory = DevelopmentCardSet.empty[Int],
+  playedDevCards: DevelopmentCardsByTurn = DevelopmentCardsByTurn(),
   knownunplayedDevCards: PlayedInventory = DevelopmentCardSet.empty[Int],
   numUnknownDevCards: Int = 0,
   unknownDevCards: UnplayedInventory = DevelopmentCardSet.empty[Double])
@@ -49,10 +49,10 @@ case class PossibleDevelopmentCards(cards: Map[Int, PossibleDevCardsHands] = Map
       }
     ).updateUnknownDevCards
 
-  def playCard(player: Int, card: DevelopmentCard): PossibleDevelopmentCards = copy(
+  def playCard(turn: Int, player: Int, card: DevelopmentCard): PossibleDevelopmentCards = copy(
     cards.map {
       case (`player`, hand) =>
-        val addPlayedCard = hand.copy(playedDevCards = hand.playedDevCards.add(1, card))
+        val addPlayedCard = hand.copy(playedDevCards = hand.playedDevCards.addCard(turn, card))
         player -> {
           if (addPlayedCard.knownunplayedDevCards.contains(card)) {
             addPlayedCard.copy(knownunplayedDevCards = addPlayedCard.knownunplayedDevCards.subtract(1, card))

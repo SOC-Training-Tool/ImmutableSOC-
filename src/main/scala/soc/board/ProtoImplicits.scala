@@ -37,13 +37,13 @@ object ProtoImplicits {
         case Wheat => PHex.Resource.WHEAT
         case Wood => PHex.Resource.WOOD
       }
-      PHex(id, protoRes, Some(roll.number), adjacentVertices)
+      PHex(id, protoRes, Some(PHex.HexProbability(roll.number, roll.dots)), adjacentVertices)
     }
   }
 
   implicit def hexFromProto[T <: BoardConfiguration](implicit boardMapping: BoardMapping[T]): ProtoCoder[PHex, BoardHex] = { protoHex =>
     val node = boardMapping.reverseHexMapping(protoHex.id)
-    val roll = protoHex.number.map(Roll)
+    val roll = protoHex.hexProbability.map(n => Roll(n.number))
     val hex = protoHex.resource match {
       case PHex.Resource.BRICK => ResourceHex(Brick, roll.get)
       case PHex.Resource.ORE => ResourceHex(Ore, roll.get)

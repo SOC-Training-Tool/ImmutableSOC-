@@ -3,7 +3,7 @@ package soc.state.player
 import soc.board._
 import soc.core.GameRules
 import soc.inventory._
-import soc.inventory.developmentCard.DevelopmentCardSet.PlayedInventory
+import soc.inventory.developmentCard.DevelopmentCardSet._
 import soc.inventory.resources.CatanResourceSet
 import soc.inventory.resources.CatanResourceSet.ResourceSet
 
@@ -18,8 +18,7 @@ case class PlayerState[T <: Inventory[T]](
   cities: List[Vertex] = Nil,
   roads: List[Edge] = Nil,
   dots: ResourceSet[Int] = CatanResourceSet.empty,
-  roadLength: Int = 0)
-  (implicit val gameRules: GameRules) {
+  roadLength: Int = 0) {
 
   val settlementPoints = settlements.length
   val cityPoints = 2 * cities.length
@@ -27,7 +26,7 @@ case class PlayerState[T <: Inventory[T]](
   val dCardPoints = inventory.playedDevCards.getAmount(CatanPoint)
   val points = boardPoints + armyPoints + roadPoints + dCardPoints
 
-  def canBuildSettlement = settlements.length < gameRules.numSettlements
+  def canBuildSettlement(implicit gameRules: GameRules) = settlements.length < gameRules.numSettlements
 
   def buildSettlement(board: CatanBoard, vertex: Vertex): PlayerState[T] = copy(
     settlements = this.settlements ::: List(vertex),
@@ -39,7 +38,7 @@ case class PlayerState[T <: Inventory[T]](
     }.foldLeft(this.dots) { case (set, (amt, res)) => set.add(amt, res) }
   )
 
-  def canBuildCity = cities.length < gameRules.numCities
+  def canBuildCity(implicit gameRules: GameRules) = cities.length < gameRules.numCities
 
   def buildCity(board: CatanBoard, vertex: Vertex): PlayerState[T] = copy(
     settlements = this.settlements.filterNot(_ == vertex),
@@ -51,7 +50,7 @@ case class PlayerState[T <: Inventory[T]](
     }.foldLeft(this.dots) { case (set, (amt, res)) => set.add(amt, res) }
   )
 
-  def canBuildRoad = roads.length < gameRules.numRoads
+  def canBuildRoad(implicit gameRules: GameRules) = roads.length < gameRules.numRoads
 
   def buildRoad(board: CatanBoard, edge: Edge): PlayerState[T] = copy(
     roads = this.roads ::: List(edge),
@@ -78,12 +77,12 @@ case class PlayerState[T <: Inventory[T]](
 
   def updateResources(transactions: inventory.UpdateRes): PlayerState[T] = {
     copy(
-      inventory = inventory.updateResources(transactions)
+      inventory = inventory.updateResources(position, transactions)
     )
   }
 
-  def updateDevelopmentCard(card: inventory.UpdateDev): PlayerState[T]= copy (
-    inventory = inventory.updateDevelopmentCard(card)
+  def updateDevelopmentCard(turn: Int, card: inventory.UpdateDev): PlayerState[T]= copy (
+    inventory = inventory.updateDevelopmentCard(turn, position, card)
   )
 
   def canBuyDevelopmentCard = true

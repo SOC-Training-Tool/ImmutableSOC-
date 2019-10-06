@@ -3,9 +3,9 @@ package soc.inventory
 import protos.soc.inventory.PossibleHands.HandCombination
 import protos.soc.inventory.PossibleHands.HandCombination.HandsWithMultiplier
 import protos.soc.inventory.ProbableResourceSet.ProbableCardValue
-import protos.soc.inventory.{DevelopmentCard => PDev, DevelopmentCardSet => PDevSet, PerfectInventory => PPerfect, PossibleHands => PPossible, ProbableInventory => PProbable, ProbableResourceSet => PProb, PublicInventory => PPublic, Resource => PResource, ResourceSet => PResSet}
-import soc.inventory.Inventory.{NoInfo, PerfectInfo, ProbableInfo}
-import soc.inventory.developmentCard.DevelopmentCardSet
+import protos.soc.inventory.{ResourceCount, DevelopmentCard => PDev, PossibleHands => PPossible, ProbableResourceSet => PProb, PublicInventory => PPublic, Resource => PResource}
+import soc.inventory.Inventory.NoInfo
+import soc.inventory.developmentCard.{DevelopmentCardSet, DevelopmentCardsByTurn}
 import soc.inventory.resources.CatanResourceSet.Resources
 import soc.inventory.resources.{CatanResourceSet, PossibleHands, ProbableResourceSet}
 import soc.proto.ProtoCoder
@@ -14,7 +14,7 @@ import util.MapReverse
 
 object ProtoImplicits {
 
-  private lazy val resourceMap: Map[Resource, PResource] = Map(Brick -> PResource.BRICK,  Ore -> PResource.ORE, Sheep -> PResource.SHEEP, Wheat -> PResource.WHEAT, Wood -> PResource.WOOD)
+  private lazy val resourceMap: Map[Resource, PResource] = Map(Brick -> PResource.BRICK, Ore -> PResource.ORE, Sheep -> PResource.SHEEP, Wheat -> PResource.WHEAT, Wood -> PResource.WOOD)
   private lazy val reverseResourceMap = MapReverse.reverseMap(resourceMap)
   private lazy val devCardMap: Map[DevelopmentCard, PDev] = Map(Knight -> PDev.KNIGHT, YearOfPlenty -> PDev.YEAR_OF_PLENTY, Monopoly -> PDev.MONOPOLY, RoadBuilder -> PDev.ROAD_BUILDER, CatanPoint -> PDev.POINT)
   private lazy val reverseDevCardMap = MapReverse.reverseMap(devCardMap)
@@ -24,16 +24,9 @@ object ProtoImplicits {
   implicit val protoDevelopmentCard: ProtoCoder[DevelopmentCard, PDev] = dev => devCardMap(dev)
   implicit val developmentCardFromProto: ProtoCoder[PDev, DevelopmentCard] = protoDev => reverseDevCardMap(protoDev)
 
-  implicit val protoResourceSet: ProtoCoder[CatanResourceSet[Int], PResSet] = resources => PResSet(CatanSet.toList(resources).map(_.proto))
-  implicit val resourceSetFromProto: ProtoCoder[PResSet, CatanResourceSet[Int]] = { protoResources =>
-    import CatanResourceSet._
-    CatanSet.fromList[Resource, CatanResourceSet[Int]](protoResources.resourceCards.map(_.proto))
-  }
-
-  implicit val protoDevCardSet: ProtoCoder[DevelopmentCardSet[Int], PDevSet] = dev => PDevSet(CatanSet.toList(dev).map(_.proto))
-  implicit val devCardFromProto: ProtoCoder[PDevSet, DevelopmentCardSet[Int]] = { protoDevCards =>
-    import DevelopmentCardSet._
-    CatanSet.fromList[DevelopmentCard, DevelopmentCardSet[Int]](protoDevCards.developmentCards.map(_.proto))
+  implicit val protoResourceSet: ProtoCoder[CatanResourceSet[Int], Seq[ResourceCount]] = resources => resources.amountMap.toSeq.map { case (res, amt) => ResourceCount(res.proto, amt) }
+  implicit val resourceSetFromProto: ProtoCoder[Seq[ResourceCount], CatanResourceSet[Int]] = { protoResources =>
+     CatanResourceSet.fromMap(protoResources.map { case ResourceCount(res, amt) => res.proto -> amt}.toMap[Resource, Int])
   }
 
   implicit val protoProbableResourceSet: ProtoCoder[ProbableResourceSet, PProb] = { probableResourceSet =>
@@ -52,7 +45,7 @@ object ProtoImplicits {
 
   implicit val protoPossibleHands: ProtoCoder[PossibleHands, PPossible] = { possibleHands =>
     implicit val protoHandCombination: ProtoCoder[Map[Int, (Resources, Int)], HandCombination] = { mapMult =>
-      HandCombination(mapMult.view.mapValues { case (res, mult) => HandsWithMultiplier(res.proto, mult)}.toMap)
+      HandCombination(mapMult.view.mapValues { case (res, mult) => HandsWithMultiplier(res.proto, mult) }.toMap)
     }
     PPossible(possibleHands.hands.map(_.proto))
   }
@@ -63,23 +56,47 @@ object ProtoImplicits {
     })
   }
 
-  implicit val protoPublicInventory: ProtoCoder[Inventory[_], PPublic] = inv => PPublic(inv.numCards, inv.numUnplayedDevCards, inv.playedDevCards.proto)
-  implicit val protoProbableInventory: ProtoCoder[ProbableInfo, PProbable] = inv => PProbable(inv.probableResourceSet.proto, null)
-  implicit val protoPerfectInventory: ProtoCoder[PerfectInfo, PPerfect] = { inv =>
-    PPerfect(
-      inv.resourceSet.proto,
-      inv.playedDevCards.proto,
-      inv.canPlayDevCards.proto,
-      inv.cannotPlayDevCards.proto
+  implicit val protoPublicInventory: ProtoCoder[NoInfo, PPublic] = { inv =>
+    PPublic(
+      inv.numCards,
+      inv.numUnplayedDevCards,
+      inv.playedDevCards.turnMap.view.mapValues(_.head.proto).toMap)
+  }
+
+  implicit val publicInventoryFromProto: ProtoCoder[PPublic, NoInfo] = { protoInv =>
+    NoInfoInventory(
+      DevelopmentCardsByTurn( protoInv.playedDevCards.view.mapValues(d => List(d.proto)).toMap),
+      protoInv.numCards,
+      protoInv.numDevelopmentCards
     )
   }
-//
-//  implicit val publicInventoryToProto: ProtoCoder[PPublic, NoInfo] = { protoInv =>
-//
-//
+
+
+
+//  implicit val protoDevCardSet: ProtoCoder[DevelopmentCardSet[Int], PDevSet] = dev => PDevSet(CatanSet.toList(dev).map(_.proto))
+//  implicit val devCardFromProto: ProtoCoder[PDevSet, DevelopmentCardSet[Int]] = { protoDevCards =>
+//    import DevelopmentCardSet._
+//    CatanSet.fromList[DevelopmentCard, DevelopmentCardSet[Int]](protoDevCards.developmentCards.map(_.proto))
 //  }
-
-
-
-
+//  implicit val protoProbableInventory: ProtoCoder[ProbableInfo, PProbable] = inv => PProbable(inv.probableResourceSet.proto, null)
+//  implicit val protoPerfectInventory: ProtoCoder[PerfectInfo, PPerfect] = { inv =>
+//    PPerfect(
+//      inv.resourceSet.proto,
+//      inv.playedDevCards.proto,
+//      inv.canPlayDevCards.proto,
+//      inv.cannotPlayDevCards.proto
+//    )
+//  }
+//
+//  implicit val perfectInventoryFromProto: ProtoCoder[PPerfect, PerfectInfo] = { protoInv =>
+//    import DevelopmentCardSet._
+//    import CatanResourceSet._
+//    PerfectInfoInventory(
+//      CatanSet.fromList[Resource, CatanResourceSet[Int]](protoInv.resourceCards.resourceCards.map(_.proto).toList),
+//      CatanSet.fromList[DevelopmentCard, DevelopmentCardSet[Int]](protoInv.playedDevCards.developmentCards.map(_.proto).toList),
+//      CatanSet.fromList[DevelopmentCard, DevelopmentCardSet[Int]](protoInv.canPlayDevCards.developmentCards.map(_.proto).toList),
+//      CatanSet.fromList[DevelopmentCard, DevelopmentCardSet[Int]](protoInv.cannotPlayDevCards.developmentCards.map(_.proto).toList)
+//    )
+//  }
+//}
 }

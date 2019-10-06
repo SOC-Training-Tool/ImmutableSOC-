@@ -117,6 +117,26 @@ case class CatanBoard private(
     )
   }
 
+  def getSettlementVerticesForPlayer(id: Int): Seq[Vertex] = verticesBuildingMap.toSeq.filter {
+    case (v, Settlement(`id`)) => true
+    case _ => false
+  }.map(_._1)
+  def getNumSettlementsForPlayer(id: Int): Int = getSettlementVerticesForPlayer(id).length
+
+  def getNumCityVerticesForPlayer(id: Int): Seq[Vertex] = verticesBuildingMap.toSeq.filter {
+    case (v, City(`id`)) => true
+    case _ => false
+  }.map(_._1)
+  def getNumCitiesForPlayer(id: Int): Int = getNumCityVerticesForPlayer(id).length
+
+  def getRoadEdgesForPlayer(id: Int): Seq[Edge] = edgesBuildingMap.toSeq.filter {
+    case (e, Road(`id`)) => true
+    case _ => false
+  }.map(_._1)
+  def getNumRoadsForPlayer(id: Int): Int = getRoadEdgesForPlayer(id).length
+
+  def getPortsForPlayer(id: Int): Set[Port] = getSettlementVerticesForPlayer(id).flatMap(getPort).toSet
+
   def getPort(vertex: Vertex): Option[Port] = {
     portMap.find { case (edge, _) => edge.contains(vertex) }.map(_._2)
   }

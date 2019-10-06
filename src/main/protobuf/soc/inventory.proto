@@ -3,27 +3,28 @@ syntax = "proto2";
 package protos.soc;
 
 enum Resource {
-    BRICK = 1;
-    ORE = 2;
-    SHEEP = 3;
-    WHEAT = 4;
-    WOOD = 5;
+    BRICK = 0;
+    ORE = 1;
+    SHEEP = 2;
+    WHEAT = 3;
+    WOOD = 4;
 }
 
 enum DevelopmentCard {
-    KNIGHT = 1;
-    YEAR_OF_PLENTY = 2;
-    MONOPOLY = 3;
-    ROAD_BUILDER = 4;
-    POINT = 5;
+    KNIGHT = 0;
+    YEAR_OF_PLENTY = 1;
+    MONOPOLY = 2;
+    ROAD_BUILDER = 3;
+    POINT = 4;
 }
 
-message ResourceSet {
-    repeated Resource resource_cards = 1;
+message ResourceCount {
+    required Resource cardType = 1;
+    required int32 count = 2;
 }
 
 message DevelopmentCardSet {
-    repeated DevelopmentCard development_cards = 1;
+    map<int32, DevelopmentCard> development_cards = 1;
 }
 
 message ProbableResourceSet {
@@ -39,7 +40,7 @@ message PossibleHands {
 
     message HandCombination {
         message HandsWithMultiplier {
-            required ResourceSet cards = 1;
+            repeated ResourceCount cards = 1;
             required int32 multiplier = 2;
         }
         map<int32, HandsWithMultiplier> hand = 1;
@@ -50,14 +51,12 @@ message PossibleHands {
 message PublicInventory {
     required int32 num_cards = 1;
     required int32 num_development_cards = 2;
-    required DevelopmentCardSet played_dev_cards = 3;
+    map<int32, DevelopmentCard> played_dev_cards = 3;
 }
 
 message PerfectInventory {
-    required ResourceSet resource_cards = 1;
-    required DevelopmentCardSet played_dev_cards = 2;
-    required DevelopmentCardSet can_play_dev_cards = 3;
-    required DevelopmentCardSet cannot_play_dev_cards = 4;
+    repeated ResourceCount resource_cards = 1;
+    map<int32, DevelopmentCardSet> not_played_development_cards_by_turn_bought = 2;
 }
 
 message ProbableInventory {
