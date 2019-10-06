@@ -4,6 +4,7 @@ import soc.board._
 import soc.core.GameRules
 import soc.inventory._
 import soc.inventory.developmentCard.DevelopmentCardSet._
+import soc.inventory.developmentCard.DevelopmentCardsByTurn
 import soc.inventory.resources.CatanResourceSet
 import soc.inventory.resources.CatanResourceSet.ResourceSet
 
@@ -57,7 +58,7 @@ case class PlayerState[T <: Inventory[T]](
     roadLength = board.buildRoad(edge, position).roadLengths.get(position).getOrElse(0)
   )
 
-  val playedDevCards: PlayedInventory = inventory.playedDevCards
+  val playedDevCards: DevelopmentCardsByTurn = inventory.playedDevCards
 
   val numUnplayedDevCards: Int = inventory.numUnplayedDevCards
 

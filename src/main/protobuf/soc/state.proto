@@ -5,6 +5,11 @@ package protos.soc;
 import "soc/board.proto";
 import "soc/inventory.proto";
 
+enum TurnPhase {
+    ROLL = 0;
+    BUY_TRADE_OR_END = 1;
+}
+
 message Player {
     required string name = 1;
     required int32 position = 2;
@@ -26,7 +31,6 @@ message PublicGameState {
     repeated ResourceCount resource_bank = 3;
     required int32 development_cards_left = 4;
     required Player current_turn_player = 5;
-    required bool can_roll_dice = 6;
-    required bool can_play_card = 7;
-    required int32 turn = 8;
+    required TurnPhase phase = 6;
+    required int32 turn = 7;
 }

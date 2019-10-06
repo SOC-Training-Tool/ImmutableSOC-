@@ -1,7 +1,7 @@
 package soc.state
 
-import protos.soc.gameState.PublicGameState
-import protos.soc.playerState.{Player, PublicPlayerState => PPState}
+import soc.inventory.developmentCard.DevelopmentCardSet._
+import protos.soc.state.{Player, PublicGameState, PublicPlayerState => PPState}
 import soc.inventory.Inventory.NoInfo
 import soc.inventory.{Inventory, Knight, NoInfoInventoryHelper}
 import soc.proto.ProtoCoder

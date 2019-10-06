@@ -1,10 +1,9 @@
 package soc.state
 
-import protos.soc.gameState.PublicGameState
 import soc.proto.ProtoCoder.ops._
 import soc.board._
 import BaseCatanBoard.baseBoardMapping
-import protos.soc.playerState.Player
+import protos.soc.state.{Player, PublicGameState, TurnPhase}
 import soc.board.ProtoImplicits._
 import soc.inventory.ProtoImplicits._
 import soc.core._
@@ -31,8 +30,8 @@ case class GameState[T <: Inventory[T]](
   val board: CatanBoard = publicGameState.board.proto
   val bank = publicGameState.resourceBank.proto
   val developmentCardsInDeck = publicGameState.developmentCardsLeft
-  val canRollDice = publicGameState.canRollDice
-  val canPlayCard = publicGameState.canPlayCard
+  val canRollDice = publicGameState.phase == TurnPhase.ROLL
+  val canPlayCard = players.getPlayer(currentPlayer).playedDevCards.containsCardOnTurn(publicGameState.turn)
   val turnNumber = publicGameState.turn
 
   val firstPlayerId: Int = players.firstPlayerId
@@ -69,7 +68,7 @@ case class GameState[T <: Inventory[T]](
   def rollDice(diceRoll: Roll): GameState[T] = {
 
     if (diceRoll.number == 7) return copy(publicGameState.copy(
-      canRollDice = false
+      phase = TurnPhase.BUY_TRADE_OR_END
     ))
 
     val resForPlayers: Map[Int, Resources] = board.getResourcesGainedOnRoll(diceRoll.number)
@@ -92,7 +91,7 @@ case class GameState[T <: Inventory[T]](
     }.filterNot(_.resourceSet.isEmpty).toList
 
     update (
-      _.copy(resourceBank = bank.subtract(trueTotalCollected).proto, canRollDice = false),
+      _.copy(resourceBank = bank.subtract(trueTotalCollected).proto, phase = TurnPhase.BUY_TRADE_OR_END),
       _.updateResources(newTransactions)
     )
   }
@@ -158,7 +157,7 @@ case class GameState[T <: Inventory[T]](
   def playKnight(result: KnightResult): GameState[T] = playKnight(result.robber.robberLocation, result.robber.steal)
   def playKnight(robberLocation: Int, steal: Option[Steal]): GameState[T] = {
     update(
-      _.copy(canPlayCard = false),
+      _.copy(),
       _.playKnight(currentPlayer, turnNumber)
     ).moveRobberAndSteal(robberLocation, steal)
   }
@@ -168,7 +167,7 @@ case class GameState[T <: Inventory[T]](
     val newTransactions = Gain(currentPlayer, cardsLost.values.fold(CatanResourceSet.empty[Int])(_.add(_))) ::
       cardsLost.map { case (player, cards) => Lose(player, cards) }.toList
     update(
-      _.copy(canPlayCard = false),
+      _.copy(),
       _.playMonopoly(currentPlayer, turnNumber).updateResources(newTransactions)
     )
   }
@@ -178,7 +177,7 @@ case class GameState[T <: Inventory[T]](
     val set = CatanResourceSet.fromList(card1, card2)
     val newTransactions = List(Gain(currentPlayer, set))
     update(
-      _.copy(canPlayCard = false, resourceBank = bank.subtract(set).proto),
+      _.copy(resourceBank = bank.subtract(set).proto),
       _.playYearOfPlenty(currentPlayer, turnNumber).updateResources(newTransactions)
     )
   }
@@ -188,7 +187,7 @@ case class GameState[T <: Inventory[T]](
     val firstRoadBoard = buildRoad(road1, buy = false)
     val newBoard = road2.fold(firstRoadBoard)(r => firstRoadBoard.buildRoad(r, buy = false))
     newBoard.update(
-      _.copy(canPlayCard = false),
+      _.copy(),
       _.playRoadBuilder(currentPlayer, turnNumber)
     )
   }
@@ -228,7 +227,7 @@ case class GameState[T <: Inventory[T]](
       players.getPlayer(nextPlayerPosition).position
     )
     update(
-      _.copy(canRollDice = true, canPlayCard = true, currentTurnPlayer = nextPlayer ),
+      _.copy(phase = TurnPhase.ROLL, currentTurnPlayer = nextPlayer ),
       _.endTurn(currentPlayer)
     )
   }
@@ -283,8 +282,7 @@ object GameState {
         rules.initBank.proto,
         rules.initDevCardAmounts.getTotal,
         firstPlayer,
-        true,
-        true,
+        TurnPhase.ROLL,
         0),
       players)
   }

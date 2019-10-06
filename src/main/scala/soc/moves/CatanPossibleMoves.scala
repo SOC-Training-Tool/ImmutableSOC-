@@ -3,9 +3,8 @@ package soc.moves
 import soc.proto.ProtoCoder.ops._
 import soc.board._
 import BaseCatanBoard.baseBoardMapping
+import protos.soc.state.{PublicGameState, TurnPhase}
 import soc.board.ProtoImplicits._
-
-import protos.soc.gameState.PublicGameState
 import soc.core.GameRules
 import soc.inventory.Inventory.PerfectInfo
 import soc.inventory.resources.CatanResourceSet
@@ -25,11 +24,11 @@ case class CatanPossibleMoves (state: PublicGameState, inventory: PerfectInfo, p
 
   def getPossibleMovesForState: List[CatanMove] = {
 
-    val devCardMoves = if (state.canPlayCard) {
+    val devCardMoves = if (!inventory.playedDevCards.containsCardOnTurn(state.turn)) {
       getPossibleDevelopmentCard
     } else Nil
 
-    val beforeOrAfterDiceMoves = if (state.canRollDice) List(RollDiceMove)
+    val beforeOrAfterDiceMoves = if (state.phase == TurnPhase.ROLL) List(RollDiceMove)
     else {
       EndTurnMove ::
         getPossibleBuilds :::
@@ -153,7 +152,7 @@ case class CatanPossibleMoves (state: PublicGameState, inventory: PerfectInfo, p
     else Nil
 
     knight ::: {
-      if (state.canRollDice) Nil
+      if (state.phase == TurnPhase.ROLL) Nil
       else monopoly ::: yearOfPlenty ::: roads
     }
   }
