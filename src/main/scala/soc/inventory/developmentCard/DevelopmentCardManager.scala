@@ -1,5 +1,6 @@
 package soc.inventory.developmentCard
 
+import protos.soc.inventory.DevelopmentCardSpecification
 import soc.inventory._
 
 import scala.util.Random
@@ -42,7 +43,7 @@ object DevelopmentCardSet {
     )
   }
 
-  implicit def toDevelopmentCardSet(d: DevelopmentCardsByTurn): DevelopmentCardSet[Int] = CatanSet.fromList[DevelopmentCard, DevelopmentCardSet[Int]](d.toList)
+  implicit def toDevelopmentCardSet(specifications: DevelopmentCardSpecificationSet): DevelopmentCardSet[Int] = CatanSet.fromList(specifications.toList)
 }
 
 class DevelopmentCardManager(kn: Int, po: Int, mp: Int, rb: Int, yp: Int)(implicit random: Random) {
@@ -55,22 +56,27 @@ class DevelopmentCardManager(kn: Int, po: Int, mp: Int, rb: Int, yp: Int)(implic
   }
 }
 
-case class DevelopmentCardsByTurn(turnMap: Map[Int, List[DevelopmentCard]] = Map.empty) {
-  def addCard(turn: Int, card: DevelopmentCard): DevelopmentCardsByTurn = copy(
-    turnMap.get(turn).fold(turnMap + (turn -> List(card)))(cards => (turnMap - turn) + (turn -> (card :: cards)))
-  )
 
-  def removeFirst(card: DevelopmentCard): DevelopmentCardsByTurn = copy(
-    turnMap.find(_._2.contains(card)).fold(turnMap) { case (turn, cards) =>
-      val amount = cards.count(_ == card)
-      (turnMap - turn) + (turn -> (cards.filterNot(_ == card) ::: (1 to amount - 1).map(_ => card).toList))
-    }
-  )
+case class DevelopmentCardSpecificationSet(protected[inventory] val cards: List[DevelopmentCardSpecification] = Nil) {
+  import soc.inventory.ProtoImplicits._
+  import soc.proto.ProtoCoder.ops._
 
-  def containsCardOnTurn(turn: Int) = turnMap.get(turn).isDefined
+  lazy val length = cards.length
+  lazy val isEmpty = cards.length == 0
 
-  lazy val toList = turnMap.values.toSeq.flatten
+  def buyCard(turn: Int, card: DevelopmentCard): DevelopmentCardSpecificationSet = copy(DevelopmentCardSpecification(card.proto, Some(turn), None) :: cards)
+  def playCard(turn: Int, card: DevelopmentCard): DevelopmentCardSpecificationSet = {
+    def f(c: DevelopmentCardSpecification) = c.turnPlayed.isEmpty && c.`type` == card.proto
+    val s = cards.filter(f).sortBy(_.turnPurchased)
+    copy(s.headOption.fold(List(DevelopmentCardSpecification(card.proto, None, Some(turn))))(_.copy(turnPlayed = Some(turn)) :: s.tail) ::: cards.filterNot(f))
+  }
+  def playedCardOnTurn(turn: Int) = cards.find(_.turnPlayed.fold(false)(_ == turn)).isDefined
+
+  lazy val filterUnPlayed = copy(cards.filter(_.turnPlayed.isEmpty))
+  lazy val filterPlayed = copy(cards.filter(_.turnPlayed.isDefined))
+  lazy val toList: List[DevelopmentCard] = cards.map(_.`type`.proto)
 }
+
 
 sealed trait DevCardTransaction
 

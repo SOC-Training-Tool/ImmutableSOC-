@@ -5,7 +5,7 @@ import protos.soc.inventory.PossibleHands.HandCombination.HandsWithMultiplier
 import protos.soc.inventory.ProbableResourceSet.ProbableCardValue
 import protos.soc.inventory.{ResourceCount, DevelopmentCard => PDev, PossibleHands => PPossible, ProbableResourceSet => PProb, PublicInventory => PPublic, Resource => PResource}
 import soc.inventory.Inventory.NoInfo
-import soc.inventory.developmentCard.{DevelopmentCardSet, DevelopmentCardsByTurn}
+import soc.inventory.developmentCard.{DevelopmentCardSet, DevelopmentCardSpecificationSet}
 import soc.inventory.resources.CatanResourceSet.Resources
 import soc.inventory.resources.{CatanResourceSet, PossibleHands, ProbableResourceSet}
 import soc.proto.ProtoCoder
@@ -16,7 +16,7 @@ object ProtoImplicits {
 
   private lazy val resourceMap: Map[Resource, PResource] = Map(Brick -> PResource.BRICK, Ore -> PResource.ORE, Sheep -> PResource.SHEEP, Wheat -> PResource.WHEAT, Wood -> PResource.WOOD)
   private lazy val reverseResourceMap = MapReverse.reverseMap(resourceMap)
-  private lazy val devCardMap: Map[DevelopmentCard, PDev] = Map(Knight -> PDev.KNIGHT, YearOfPlenty -> PDev.YEAR_OF_PLENTY, Monopoly -> PDev.MONOPOLY, RoadBuilder -> PDev.ROAD_BUILDER, CatanPoint -> PDev.POINT)
+  private lazy val devCardMap: Map[DevelopmentCard, PDev] = Map(Knight -> PDev.KNIGHT, YearOfPlenty -> PDev.YEAR_OF_PLENTY, Monopoly -> PDev.MONOPOLY, RoadBuilder -> PDev.ROAD_BUILDER, CatanPoint -> PDev.VICTORY_POINT)
   private lazy val reverseDevCardMap = MapReverse.reverseMap(devCardMap)
 
   implicit val protoResource: ProtoCoder[Resource, PResource] = res => resourceMap(res)
@@ -37,7 +37,7 @@ object ProtoImplicits {
 
   implicit val probableResourceSetFromProto: ProtoCoder[PProb, ProbableResourceSet] = { protoProb =>
     val (known, unknown) = protoProb.probableResourceCards.foldLeft((CatanResourceSet.empty[Int], CatanResourceSet.empty[Double])) { case ((k, u), card) =>
-      val res = card.resType.proto
+      val res = card.`type`.proto
       (k.add(card.knownAmount, res), u.add(card.unknownAmount, res))
     }
     ProbableResourceSet(known, unknown)
@@ -60,14 +60,14 @@ object ProtoImplicits {
     PPublic(
       inv.numCards,
       inv.numUnplayedDevCards,
-      inv.playedDevCards.turnMap.view.mapValues(_.head.proto).toMap)
+      inv.playedDevCards.cards)
   }
 
   implicit val publicInventoryFromProto: ProtoCoder[PPublic, NoInfo] = { protoInv =>
     NoInfoInventory(
-      DevelopmentCardsByTurn( protoInv.playedDevCards.view.mapValues(d => List(d.proto)).toMap),
-      protoInv.numCards,
-      protoInv.numDevelopmentCards
+      DevelopmentCardSpecificationSet( protoInv.playedDevelopmentCards.toList),
+      protoInv.cardCount,
+      protoInv.developmentCardCount
     )
   }
 

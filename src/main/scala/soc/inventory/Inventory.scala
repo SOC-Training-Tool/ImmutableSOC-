@@ -11,7 +11,7 @@ trait Inventory[T <: Inventory[T]] { self: T =>
   type UpdateRes
   type UpdateDev
 
-  val playedDevCards: DevelopmentCardsByTurn
+  val playedDevCards: DevelopmentCardSpecificationSet
   val numUnplayedDevCards: Int
   val numCards: Int
   def canBuild(resSet: Resources): Boolean
@@ -31,8 +31,7 @@ case object Inventory {
 
 case class PerfectInfoInventory(
   resourceSet: Resources = CatanResourceSet.empty,
-  playedDevCards: DevelopmentCardsByTurn = DevelopmentCardsByTurn(),
-  notPlayedDevCards: DevelopmentCardsByTurn = DevelopmentCardsByTurn()
+  developmentCards: DevelopmentCardSpecificationSet = DevelopmentCardSpecificationSet()
 ) extends Inventory[PerfectInfo] {
 
   type UpdateRes = List[SOCTransactions]
@@ -52,11 +51,10 @@ case class PerfectInfoInventory(
   override def updateDevelopmentCard(turn: Int, position:Int, transaction: DevCardTransaction): PerfectInfoInventory = {
     transaction match {
       case BuyDevelopmentCard(`position`, Some(card)) =>
-        copy (notPlayedDevCards = notPlayedDevCards.addCard(turn, card))
+        copy (developmentCards = developmentCards.buyCard(turn, card))
       case PlayDevelopmentCard(`position`, card) =>
         copy (
-          notPlayedDevCards = notPlayedDevCards.removeFirst(card),
-          playedDevCards = playedDevCards.addCard(turn, card)
+          developmentCards = developmentCards.playCard(turn, card)
         )
       case _ => copy()
     }
@@ -65,16 +63,18 @@ case class PerfectInfoInventory(
 
   override def endTurn: PerfectInfoInventory = copy()
 
-  override val numUnplayedDevCards: Int = notPlayedDevCards.getTotal
+  override val numUnplayedDevCards: Int = developmentCards.filterUnPlayed.getTotal
   override val numCards: Int = resourceSet.getTotal
 
   override def canBuild(resSet: Resources): Boolean = resourceSet.contains(resSet)
 
   override def toPublicInfo: NoInfo = NoInfoInventory(playedDevCards, numCards, numUnplayedDevCards)
+
+  override val playedDevCards: DevelopmentCardSpecificationSet = developmentCards.filterPlayed
 }
 
 case class NoInfoInventory(
-  playedDevCards: DevelopmentCardsByTurn = DevelopmentCardsByTurn(Map.empty),
+  playedDevCards: DevelopmentCardSpecificationSet = DevelopmentCardSpecificationSet(),
   numCards: Int = 0,
   numUnplayedDevCards: Int = 0) extends Inventory[NoInfo] {
 
@@ -99,7 +99,7 @@ case class NoInfoInventory(
       case PlayDevelopmentCard(`position`, card) =>
         copy(
           numUnplayedDevCards = numUnplayedDevCards - 1,
-          playedDevCards = playedDevCards.addCard(turn, card)
+          playedDevCards = playedDevCards.playCard(turn, card)
         )
       case _ => copy()
     }
@@ -114,14 +114,14 @@ case class NoInfoInventory(
 }
 
 case class ProbableInfoInventory(
-  playedDevCards: DevelopmentCardsByTurn = DevelopmentCardsByTurn(),
+  playedDevCards: DevelopmentCardSpecificationSet = DevelopmentCardSpecificationSet(),
   probableResourceSet: ProbableResourceSet = ProbableResourceSet.empty,
   knownUnplayedDevCards: PlayedInventory=  DevelopmentCardSet.empty,
   probableDevCards: DevelopmentCardSet[Double] = DevelopmentCardSet.empty
 ) extends Inventory[ProbableInfo]  {
 
   type UpdateRes = ProbableResourceSet
-  type UpdateDev = (DevelopmentCardsByTurn, PlayedInventory, DevelopmentCardSet[Double])
+  type UpdateDev = (DevelopmentCardSpecificationSet, PlayedInventory, DevelopmentCardSet[Double])
 
   override val numUnplayedDevCards: Int = probableDevCards.getTotal.toInt + knownUnplayedDevCards.getTotal
   override val numCards: Int = probableResourceSet.getTotal
@@ -132,7 +132,7 @@ case class ProbableInfoInventory(
 
   override def endTurn: ProbableInfoInventory = copy()
 
-  override def updateDevelopmentCard(turn: Int, position: Int, update: (DevelopmentCardsByTurn, PlayedInventory, DevelopmentCardSet[Double])): ProbableInfoInventory = {
+  override def updateDevelopmentCard(turn: Int, position: Int, update: (DevelopmentCardSpecificationSet, PlayedInventory, DevelopmentCardSet[Double])): ProbableInfoInventory = {
     val (played, known, probable) = update
     copy(
       playedDevCards = played,

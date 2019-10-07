@@ -13,14 +13,12 @@ import soc.board.BaseCatanBoard.baseBoardMapping
 import soc.core.GameRules
 import soc.inventory.resources.CatanResourceSet
 
-
 object ProtoImplicits {
 
   implicit def protoPublicPlayerState[T <: Inventory[T]]: ProtoCoder[PlayerStateHelper[T], Map[Int, PPState]] = { ps =>
     ps.players.map { case (position, player) =>
       position -> PPState(
         Player(player.name, position),
-        player.boardPoints + player.armyPoints + player.roadPoints,
         player.inventory.toPublicInfo.proto,
         player.roadLength,
         player.playedDevCards.getAmount(Knight),

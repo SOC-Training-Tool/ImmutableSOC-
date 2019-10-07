@@ -17,12 +17,11 @@ message Player {
 
 message PublicPlayerState {
     required Player player = 1;
-    required int32 points = 2;
-    required PublicInventory public_inventory = 3;
-    required int32 longest_roads = 6;
-    required int32 num_knights = 7;
-    required bool has_longest = 8;
-    required bool has_largest = 9;
+    required PublicInventory public_inventory = 2;
+    required int32 longest_road_length = 3;
+    required int32 knight_count = 4;
+    required bool has_longest = 5;
+    required bool has_largest = 6;
 }
 
 message PublicGameState {

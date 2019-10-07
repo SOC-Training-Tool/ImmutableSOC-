@@ -31,7 +31,7 @@ case class GameState[T <: Inventory[T]](
   val bank = publicGameState.resourceBank.proto
   val developmentCardsInDeck = publicGameState.developmentCardsLeft
   val canRollDice = publicGameState.phase == TurnPhase.ROLL
-  val canPlayCard = players.getPlayer(currentPlayer).playedDevCards.containsCardOnTurn(publicGameState.turn)
+  val canPlayCard = players.getPlayer(currentPlayer).playedDevCards.playedCardOnTurn(publicGameState.turn)
   val turnNumber = publicGameState.turn
 
   val firstPlayerId: Int = players.firstPlayerId

@@ -24,7 +24,7 @@ case class CatanPossibleMoves (state: PublicGameState, inventory: PerfectInfo, p
 
   def getPossibleMovesForState: List[CatanMove] = {
 
-    val devCardMoves = if (!inventory.playedDevCards.containsCardOnTurn(state.turn)) {
+    val devCardMoves = if (!inventory.playedDevCards.playedCardOnTurn(state.turn)) {
       getPossibleDevelopmentCard
     } else Nil
 
@@ -107,13 +107,13 @@ case class CatanPossibleMoves (state: PublicGameState, inventory: PerfectInfo, p
     board.hexesWithNodes
       .filterNot(_.node == board.robberHex)
       .flatMap { hex =>
-        board.playersOnHex(hex.node).filterNot(p => p == currPlayer.position || state.playerStates.get(p).fold(false)(_.publicInventory.numCards <= 0)) match {
+        board.playersOnHex(hex.node).filterNot(p => p == currPlayer.position || state.playerStates.get(p).fold(false)(_.publicInventory.cardCount <= 0)) match {
           case Nil => List(MoveRobberAndStealMove(hex.node, None))
           case list => list.map(n => MoveRobberAndStealMove(hex.node, Some(n)))
         }
       }
   }.toList
-    def getPossibleDiscards(numToDiscard: Int = state.playerStates.get(playerPosition).fold(0)(_.publicInventory.numCards / 2)) = {
+    def getPossibleDiscards(numToDiscard: Int = state.playerStates.get(playerPosition).fold(0)(_.publicInventory.cardCount / 2)) = {
     CatanSet.toList[Resource, Resources](inventory.resourceSet).combinations(numToDiscard).map { resList =>
       DiscardResourcesMove(Map(playerPosition -> CatanResourceSet.fromList(resList: _*)))
     }
@@ -121,15 +121,15 @@ case class CatanPossibleMoves (state: PublicGameState, inventory: PerfectInfo, p
 
   def getPossibleDevelopmentCard: List[CatanPlayCardMove] = {
 
-    val knight: List[KnightMove] = if (!inventory.playedDevCards.containsCardOnTurn(state.turn) && inventory.notPlayedDevCards.contains(Knight)) {
+    val knight: List[KnightMove] = if (!inventory.playedDevCards.playedCardOnTurn(state.turn) && inventory.developmentCards.filterUnPlayed.contains(Knight)) {
       getPossibleRobberLocations.map(KnightMove)
     } else Nil
 
-    val monopoly: List[MonopolyMove] = if (!inventory.playedDevCards.containsCardOnTurn(state.turn) && inventory.notPlayedDevCards.contains(Monopoly)) {
+    val monopoly: List[MonopolyMove] = if (!inventory.playedDevCards.playedCardOnTurn(state.turn) && inventory.developmentCards.filterUnPlayed.contains(Monopoly)) {
       Resource.list.map(MonopolyMove)
     } else Nil
 
-    val yearOfPlenty: List[YearOfPlentyMove] = if (!inventory.playedDevCards.containsCardOnTurn(state.turn) && inventory.notPlayedDevCards.contains(YearOfPlenty)) {
+    val yearOfPlenty: List[YearOfPlentyMove] = if (!inventory.playedDevCards.playedCardOnTurn(state.turn) && inventory.developmentCards.filterUnPlayed.contains(YearOfPlenty)) {
       Resource.list.flatMap { res1 =>
         Resource.list.map { res2 =>
           YearOfPlentyMove(res1, res2)
@@ -137,7 +137,7 @@ case class CatanPossibleMoves (state: PublicGameState, inventory: PerfectInfo, p
       }
     } else Nil
 
-    val roads: List[RoadBuilderMove] = if (!inventory.playedDevCards.containsCardOnTurn(state.turn) && inventory.notPlayedDevCards.contains(RoadBuilder) && board.getNumRoadsForPlayer(playerPosition) < gameRules.numRoads) {
+    val roads: List[RoadBuilderMove] = if (!inventory.playedDevCards.playedCardOnTurn(state.turn) && inventory.developmentCards.filterUnPlayed.contains(RoadBuilder) && board.getNumRoadsForPlayer(playerPosition) < gameRules.numRoads) {
       val firsRoadsAndBoards = board.getPossibleRoads(currPlayer.position).map { road1 =>
         (road1, board.buildRoad(road1, currPlayer.position))
       }
