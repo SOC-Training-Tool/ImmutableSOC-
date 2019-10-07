@@ -1,17 +1,12 @@
 package soc.board
 
 import soc.core.Roll
-import soc.inventory._
+import soc.inventory.{ProtoImplicits => _, _}
 import org.scalatest.{FunSpec, Matchers}
+import soc.CatanFixtures._
+
 
 class CatanBoardSpec extends FunSpec with Matchers {
-
-  private val vertexMap = Map(0 -> List(0, 1, 2, 3, 4, 5))
-  private def portMapFunc(ports: List[Port]) = Map(0 -> ports(0), 1 -> ports(0))
-  private val hexes = List(ResourceHex(Wood, Roll(6)))
-  private val ports = List(Misc)
-
-  val singleHexBoard = CatanBoard(vertexMap, portMapFunc, hexes, ports)
 
   describe("canBuildSettlement") {
 
@@ -46,7 +41,7 @@ class CatanBoardSpec extends FunSpec with Matchers {
     describe ("should return true when it is a valid vertex, no neighboring vertex contains a building,") {
 
       it("and it is an initial settlement") {
-        singleHexBoard.canBuildSettlement(Vertex(0), 0, initialPlacement =true) shouldBe true
+        singleHexBoard.canBuildSettlement(Vertex(0), 0, initialPlacement = true) shouldBe true
       }
 
       it ("and it is not an initial settlement but there is an adjacent road with the correct playerId ") {
@@ -64,6 +59,11 @@ class CatanBoardSpec extends FunSpec with Matchers {
   }
 
   describe("buildSettlement") {
+
+    it("should return a CatanBoard where the verticesBuildingMap contains a settlement owned by the correct player") {
+      val board = singleHexBoard.buildSettlement(Vertex(0), 0)
+      board.verticesBuildingMap should contain (Vertex(0) -> Settlement(0))
+    }
 
   }
 
@@ -96,7 +96,10 @@ class CatanBoardSpec extends FunSpec with Matchers {
   }
 
   describe("buildCity") {
-
+    it("should return a CatanBoard where the verticesBuildingMap contains a city owned by the correct player") {
+      val board = singleHexBoard.buildSettlement(Vertex(0), 0).buildCity(Vertex(0), 0)
+      board.verticesBuildingMap should contain (Vertex(0) -> City(0))
+    }
   }
 
   describe("canBuildRoad") {
@@ -147,6 +150,11 @@ class CatanBoardSpec extends FunSpec with Matchers {
 
   describe("buildRoad") {
 
+    it("should return a CatanBoard where the edgesBuildingMap contains a city owned by the correct player") {
+      val board = singleHexBoard.buildSettlement(Vertex(0), 0).buildRoad(Edge(Vertex(0), Vertex(1)), 0)
+      board.edgesBuildingMap should contain (Edge(Vertex(0), Vertex(1)) -> Road(0))
+    }
+
   }
 
   describe("getPossibleSettlements") {
@@ -162,14 +170,53 @@ class CatanBoardSpec extends FunSpec with Matchers {
         board.getPossibleSettlements(0, initial = true) should contain allElementsOf(board.vertices.filterNot(occupiedVertices.contains))
       }
     }
+
+    describe ("when not initial") {
+
+      it ("should return empty list if there are no valid settlement spots touching roads") {
+        val board = singleHexBoard.buildSettlement(Vertex(0), 0).buildRoad(Edge(Vertex(0), Vertex(1)), 0)
+        board.getPossibleSettlements(0, false) shouldBe empty
+      }
+
+      it ("should return a list of valid vertices if there are valid settlement spots touching roads") {
+        val board = singleHexBoard.buildSettlement(Vertex(0), 0)
+          .buildRoad(Edge(Vertex(0), Vertex(1)), 0)
+          .buildRoad(Edge(Vertex(1), Vertex(2)), 0)
+          .buildRoad(Edge(Vertex(2), Vertex(3)), 0)
+          .buildRoad(Edge(Vertex(3), Vertex(4)), 0)
+        board.getPossibleSettlements(0, false) should contain only (Vertex(2), Vertex(3), Vertex(4))
+      }
+    }
   }
 
   describe("getPossibleCities") {
 
+    it ("should return empty list if there are no settlements owned by player") {
+      singleHexBoard.getPossibleCities(0) shouldBe empty
+    }
+
+    it ("should return list of valid vertices if there are settlements on the vertices") {
+      val board = singleHexBoard.buildSettlement(Vertex(0), 0)
+        .buildSettlement(Vertex(2), 0)
+      board.getPossibleCities(0) should contain only (Vertex(0), Vertex(2))
+    }
   }
 
   describe("getPossibleRoads") {
 
+    it ("should return empty list when there are no settlements or roads on the board") {
+      singleHexBoard.getPossibleRoads(0) shouldBe empty
+    }
+
+    it ("should return edges coming off settlement if those edges are not occupied") {
+      val board = singleHexBoard.buildSettlement(Vertex(0), 0)
+      board.getPossibleRoads(0) should contain only (Edge(Vertex(0), Vertex(1)), Edge(Vertex(5), Vertex(0)))
+    }
+
+    it ("should return edges coming off road if those edges are not occupied") {
+      val board = singleHexBoard.buildRoad(Edge(Vertex(0), Vertex(1)), 0)
+      board.getPossibleRoads(0) should contain only (Edge(Vertex(1), Vertex(2)), Edge(Vertex(5), Vertex(0)))
+    }
   }
 
   describe("playersOnHex") {
@@ -187,20 +234,24 @@ class CatanBoardSpec extends FunSpec with Matchers {
       0 -> List(0, 1, 2, 3, 4, 5),
       1 -> List(2, 6, 7, 8, 9, 3),
       2 -> List(10, 11, 12, 13, 7, 6)
-    )
-
-    def portMapFunc(ports: List[Port]) = Map.empty[Int, Port]
+    ).view.mapValues(_.map(Vertex)).toMap
 
     val hexes = List(ResourceHex(Wood, Roll(6)), ResourceHex(Wood, Roll(6)), ResourceHex(Wood, Roll(6)))
-    val ports = List.empty
 
-    val roadBoard = CatanBoard(vertexMap, portMapFunc, hexes, ports)
+    val roadBoard = CatanBoard(vertexMap, Map.empty, hexes)
 
     describe("without settlements") {
+
+      /*
+          -
+       */
       it("road scenario1") {
         roadBoard.buildRoad(Edge(Vertex(2), Vertex(6)), 0).longestRoadLength(0) shouldBe 1
       }
 
+      /*
+          \_
+       */
       it("road scenario2") {
         roadBoard
           .buildRoad(Edge(Vertex(2), Vertex(6)), 0)
@@ -208,6 +259,9 @@ class CatanBoardSpec extends FunSpec with Matchers {
           .longestRoadLength(0) shouldBe 2
       }
 
+      /*
+          _/
+       */
       it("road scenario3") {
         roadBoard
           .buildRoad(Edge(Vertex(2), Vertex(6)), 0)
@@ -215,6 +269,10 @@ class CatanBoardSpec extends FunSpec with Matchers {
           .longestRoadLength(0) shouldBe 2
       }
 
+      /*
+          \_
+          /
+       */
       it("road scenario4") {
         roadBoard
           .buildRoad(Edge(Vertex(2), Vertex(6)), 0)
@@ -223,6 +281,10 @@ class CatanBoardSpec extends FunSpec with Matchers {
           .longestRoadLength(0) shouldBe 2
       }
 
+      /*
+          _/
+           \
+       */
       it("road scenario5") {
         roadBoard
           .buildRoad(Edge(Vertex(2), Vertex(6)), 0)
@@ -231,6 +293,10 @@ class CatanBoardSpec extends FunSpec with Matchers {
           .longestRoadLength(0) shouldBe 2
       }
 
+      /*
+          \_/
+            \
+       */
       it("road scenario6") {
         roadBoard
           .buildRoad(Edge(Vertex(2), Vertex(6)), 0)
@@ -240,6 +306,10 @@ class CatanBoardSpec extends FunSpec with Matchers {
           .longestRoadLength(0) shouldBe 3
       }
 
+      /*
+           _/
+          / \
+       */
       it("road scenario7") {
         roadBoard
           .buildRoad(Edge(Vertex(2), Vertex(6)), 0)
@@ -249,6 +319,10 @@ class CatanBoardSpec extends FunSpec with Matchers {
           .longestRoadLength(0) shouldBe 3
       }
 
+      /*
+          \_/
+          /
+       */
       it("road scenario8") {
         roadBoard
           .buildRoad(Edge(Vertex(2), Vertex(6)), 0)
@@ -258,6 +332,10 @@ class CatanBoardSpec extends FunSpec with Matchers {
           .longestRoadLength(0) shouldBe 3
       }
 
+      /*
+          \_
+          / \
+       */
       it("road scenario9") {
         roadBoard
           .buildRoad(Edge(Vertex(2), Vertex(6)), 0)
@@ -267,6 +345,10 @@ class CatanBoardSpec extends FunSpec with Matchers {
           .longestRoadLength(0) shouldBe 3
       }
 
+      /*
+          \_/
+          / \
+       */
       it("road scenario10") {
         roadBoard
           .buildRoad(Edge(Vertex(2), Vertex(6)), 0)
@@ -277,5 +359,16 @@ class CatanBoardSpec extends FunSpec with Matchers {
           .longestRoadLength(0) shouldBe 3
       }
     }
+  }
+
+  it("board proto") {
+    import ProtoImplicits._
+    import soc.proto.ProtoCoder.ops._
+    import BaseCatanBoard.baseBoardMapping
+
+    val encoded = baseBoard.proto
+    val decoded = encoded.proto
+
+    decoded shouldEqual baseBoard
   }
 }

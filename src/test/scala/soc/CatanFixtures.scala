@@ -1,3 +1,5 @@
+package soc
+
 import soc.board._
 import soc.core.Roll
 import soc.inventory._
@@ -5,11 +7,10 @@ import soc.inventory._
 object CatanFixtures {
 
   val singleHexBoard = {
-    val vertexMap = Map(0 -> List(0, 1, 2, 3, 4, 5))
-    def portMapFunc(ports: List[Port]) = Map(0 -> ports(0), 1 -> ports(0))
+    val vertexMap = Map(0 -> List(0, 1, 2, 3, 4, 5)).view.mapValues(_.map(Vertex)).toMap
+    val portMap = Map(Edge(Vertex(0), Vertex(1)) -> Misc)
     val hexes = List(ResourceHex(Wood, Roll(6)))
-    val ports = List(Misc)
-    CatanBoard(vertexMap, portMapFunc, hexes, ports)
+    CatanBoard(vertexMap, portMap, hexes)
   }
 
   val baseBoardConfig = {

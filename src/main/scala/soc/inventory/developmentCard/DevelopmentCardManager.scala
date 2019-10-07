@@ -1,15 +1,15 @@
 package soc.inventory.developmentCard
 
+import protos.soc.inventory.DevelopmentCardSpecification
 import soc.inventory._
-import soc.inventory.developmentCard.DevCardInventory.DevelopmentCardSet
 
 import scala.util.Random
 
-case class DevCardInventory[T: Numeric](kn: T = 0, pt: T = 0, rb: T = 0, mp: T = 0, yp: T = 0) extends CatanSet[DevelopmentCard, T]{
+case class DevelopmentCardSet[T: Numeric](kn: T = 0, pt: T = 0, rb: T = 0, mp: T = 0, yp: T = 0) extends CatanSet[DevelopmentCard, T, DevelopmentCardSet[T]]{
 
   override protected val implWrap: NumericWrapper = NumericWrapper()
 
-  override protected def _copy(map: Map[DevelopmentCard, T]): DevelopmentCardSet[T] = DevCardInventory(
+  override protected def _copy(map: Map[DevelopmentCard, T]): DevelopmentCardSet[T] = DevelopmentCardSet(
     map.get(Knight).getOrElse(implWrap.wrapped.zero),
     map.get(CatanPoint).getOrElse(implWrap.wrapped.zero),
     map.get(RoadBuilder).getOrElse(implWrap.wrapped.zero),
@@ -20,20 +20,21 @@ case class DevCardInventory[T: Numeric](kn: T = 0, pt: T = 0, rb: T = 0, mp: T =
   override val amountMap: Map[DevelopmentCard, T] = Map(Knight -> kn, CatanPoint -> pt, RoadBuilder -> rb, Monopoly -> mp, YearOfPlenty -> yp)
 }
 
-object DevCardInventory {
-  type DevelopmentCardSet[T] = CatanSet[DevelopmentCard, T]
+object DevelopmentCardSet {
 
   type PlayedInventory = DevelopmentCardSet[Int]
   type UnplayedInventory = DevelopmentCardSet[Double]
 
+  implicit val emptyBuilderInt: Empty[DevelopmentCard, Int, DevelopmentCardSet[Int]] = () => empty[Int]
+  implicit val emptyBuilderDouble: Empty[DevelopmentCard, Double, DevelopmentCardSet[Double]] = () => empty[Double]
 
   def empty[T: Numeric]: DevelopmentCardSet[T] = {
     val num = implicitly[Numeric[T]]
-    DevCardInventory(num.zero, num.zero, num.zero, num.zero, num.zero)
+    DevelopmentCardSet(num.zero, num.zero, num.zero, num.zero, num.zero)
   }
 
   implicit def toInventory[T](map: Map[DevelopmentCard, T])(implicit num: Numeric[T]): DevelopmentCardSet[T] = {
-    DevCardInventory[T](
+    DevelopmentCardSet[T](
       map.get(Knight).getOrElse(num.zero),
       map.get(CatanPoint).getOrElse(num.zero),
       map.get(RoadBuilder).getOrElse(num.zero),
@@ -41,10 +42,11 @@ object DevCardInventory {
       map.get(YearOfPlenty).getOrElse(num.zero)
     )
   }
+
+  implicit def toDevelopmentCardSet(specifications: DevelopmentCardSpecificationSet): DevelopmentCardSet[Int] = CatanSet.fromList(specifications.toList)
 }
 
 class DevelopmentCardManager(kn: Int, po: Int, mp: Int, rb: Int, yp: Int)(implicit random: Random) {
-
   def buildDevelopmentCardDeck: List[DevelopmentCard] = random.shuffle {
     (1 to kn).map(_ => Knight).toList :::
       (1 to po).map(_ => CatanPoint).toList :::
@@ -53,6 +55,28 @@ class DevelopmentCardManager(kn: Int, po: Int, mp: Int, rb: Int, yp: Int)(implic
       (1 to yp).map(_ => YearOfPlenty).toList
   }
 }
+
+
+case class DevelopmentCardSpecificationSet(protected[inventory] val cards: List[DevelopmentCardSpecification] = Nil) {
+  import soc.inventory.ProtoImplicits._
+  import soc.proto.ProtoCoder.ops._
+
+  lazy val length = cards.length
+  lazy val isEmpty = cards.length == 0
+
+  def buyCard(turn: Int, card: DevelopmentCard): DevelopmentCardSpecificationSet = copy(DevelopmentCardSpecification(card.proto, Some(turn), None) :: cards)
+  def playCard(turn: Int, card: DevelopmentCard): DevelopmentCardSpecificationSet = {
+    def f(c: DevelopmentCardSpecification) = c.turnPlayed.isEmpty && c.`type` == card.proto
+    val s = cards.filter(f).sortBy(_.turnPurchased)
+    copy(s.headOption.fold(List(DevelopmentCardSpecification(card.proto, None, Some(turn))))(_.copy(turnPlayed = Some(turn)) :: s.tail) ::: cards.filterNot(f))
+  }
+  def playedCardOnTurn(turn: Int) = cards.find(_.turnPlayed.fold(false)(_ == turn)).isDefined
+
+  lazy val filterUnPlayed = copy(cards.filter(_.turnPlayed.isEmpty))
+  lazy val filterPlayed = copy(cards.filter(_.turnPlayed.isDefined))
+  lazy val toList: List[DevelopmentCard] = cards.map(_.`type`.proto)
+}
+
 
 sealed trait DevCardTransaction
 

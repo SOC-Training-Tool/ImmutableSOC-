@@ -1,7 +1,7 @@
 package soc.core
 
-import soc.inventory.developmentCard.DevCardInventory
-import soc.inventory.developmentCard.DevCardInventory.PlayedInventory
+import soc.inventory.developmentCard.DevelopmentCardSet
+import soc.inventory.developmentCard.DevelopmentCardSet.PlayedInventory
 import soc.inventory.resources.CatanResourceSet
 import soc.inventory.resources.CatanResourceSet.Resources
 
@@ -24,7 +24,7 @@ object GameRules {
 
   val POINTS_TO_WIN = 10
   val INITIAL_BANK = CatanResourceSet(NUM_EACH_RESOURCE, NUM_EACH_RESOURCE, NUM_EACH_RESOURCE, NUM_EACH_RESOURCE, NUM_EACH_RESOURCE)
-  val INITIAL_DEV_AMOUNTS = DevCardInventory(NUM_KNIGHT, NUM_VP, NUM_ROAD_BUILDER, NUM_MONOPOLY, NUM_YOP)
+  val INITIAL_DEV_AMOUNTS = DevelopmentCardSet(NUM_KNIGHT, NUM_VP, NUM_ROAD_BUILDER, NUM_MONOPOLY, NUM_YOP)
   val NUM_SETTLEMENTS = 5
   val NUM_CITIES = 4
   val NUM_ROADS = 15

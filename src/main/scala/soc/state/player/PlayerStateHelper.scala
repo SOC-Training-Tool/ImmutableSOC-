@@ -48,15 +48,15 @@ case class PlayerStateHelper [T <: Inventory[T]] protected (val players: Map[Int
     }
   )
 
-  def playKnight(id: Int): PlayerStateHelper[T] = playDevelopmentCard(id, Knight).updateLargestArmy
+  def playKnight(id: Int, turn: Int): PlayerStateHelper[T] = playDevelopmentCard(id, turn, Knight).updateLargestArmy
 
   def updateResources(transactions: List[SOCTransactions]): PlayerStateHelper[T] = {
     val (newPlayers, newInvManager) = inventoryHelper.updateResources(players, transactions)
     copy(newPlayers)(newInvManager, gameRules)
   }
 
-  def buyDevelopmentCard(id: Int, card: Option[DevelopmentCard]):  PlayerStateHelper[T] = {
-    val (newPlayers, newInvManager) = inventoryHelper.buyDevelopmentCard(players, id, card)
+  def buyDevelopmentCard(turn: Int, id: Int, card: Option[DevelopmentCard]):  PlayerStateHelper[T] = {
+    val (newPlayers, newInvManager) = inventoryHelper.buyDevelopmentCard(players, id, turn, card)
     copy(newPlayers)(newInvManager, gameRules)
   }
 
@@ -67,14 +67,14 @@ case class PlayerStateHelper [T <: Inventory[T]] protected (val players: Map[Int
     }
   )
 
-  protected def playDevelopmentCard(id: Int, card: DevelopmentCard): PlayerStateHelper[T] = {
-    val (newPlayers, newInvManager) = inventoryHelper.playDevelopmentCard(players, id, card)
+  protected def playDevelopmentCard(id: Int, turn: Int, card: DevelopmentCard): PlayerStateHelper[T] = {
+    val (newPlayers, newInvManager) = inventoryHelper.playDevelopmentCard(players, id, turn, card)
     copy(newPlayers)(newInvManager, gameRules)
   }
 
-  def playMonopoly(id: Int): PlayerStateHelper[T] = playDevelopmentCard(id, Monopoly)
-  def playYearOfPlenty(id: Int): PlayerStateHelper[T] = playDevelopmentCard(id, YearOfPlenty)
-  def playRoadBuilder(id: Int): PlayerStateHelper[T] = playDevelopmentCard(id, RoadBuilder)
+  def playMonopoly(id: Int, turn: Int): PlayerStateHelper[T] = playDevelopmentCard(id, turn, Monopoly)
+  def playYearOfPlenty(id: Int, turn: Int): PlayerStateHelper[T] = playDevelopmentCard(id, turn, YearOfPlenty)
+  def playRoadBuilder(id: Int, turn: Int): PlayerStateHelper[T] = playDevelopmentCard(id, turn, RoadBuilder)
 
   def updateLongestRoad: PlayerStateHelper[T] = {
     val longestRoad: Option[PlayerState[T]] = players.values.find(_.roadPoints >= 2)
@@ -96,6 +96,7 @@ case class PlayerStateHelper [T <: Inventory[T]] protected (val players: Map[Int
   }
 
   def updateLargestArmy: PlayerStateHelper[T] = {
+    import soc.inventory.developmentCard.DevelopmentCardSet._
     val largestArmy: Option[PlayerState[T]] = players.values.find(_.armyPoints >= 2)
     val newLargestArmy = players.values.filter{ p =>
       p.inventory.playedDevCards.getAmount(Knight) > largestArmy.fold(2)(_.inventory.playedDevCards.getAmount(Knight))
@@ -121,7 +122,7 @@ object PlayerStateHelper {
 
   def apply[T <: Inventory[T]](s: Seq[(String, Int)])(implicit factory: InventoryHelperFactory[T], gameRules: GameRules) = {
     implicit val invHelper = factory.createInventoryHelper
-    new PlayerStateHelper[T](s.map {case(name, id) => id -> PlayerState(name, id, invHelper.createInventory(id)) }.toMap)
+    new PlayerStateHelper[T](s.map {case(name, id) => id -> PlayerState(name, id, invHelper.createInventory) }.toMap)
   }
 
 }

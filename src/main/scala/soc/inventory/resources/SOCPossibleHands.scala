@@ -22,8 +22,8 @@ case class PossibleHands(hands: Seq[Map[Int, (Resources, Int)]]) {
     }.toMap
     val knownMap: Map[Resource, Int] = resMap.view.mapValues(_._1).toMap
     val unknownMap: Map[Resource, Double] = resMap.view.mapValues(_._2).toMap
-    val knownSet: Resources = CatanResourceSet(knownMap)
-    val unknownSet: ResourceSet[Double] = CatanResourceSet(unknownMap)
+    val knownSet: Resources = CatanResourceSet.fromMap(knownMap)
+    val unknownSet: ResourceSet[Double] = CatanResourceSet.fromMap(unknownMap)
     playerId -> ProbableResourceSet(knownSet, unknownSet)
   }
 
@@ -51,7 +51,7 @@ case class PossibleHands(hands: Seq[Map[Int, (Resources, Int)]]) {
   def stealUnknownCards(robber: Int, victim: Int): PossibleHands = copy {
     hands.flatMap { hand =>
       Resource.list.filter(set => hand.get(victim).fold(false)(_._1.contains(set))).flatMap { res =>
-        val set = CatanResourceSet(res)
+        val set = CatanResourceSet.fromList(res)
         val amount = hand(victim)._1.getAmount(res)
         PossibleHands(Seq(hand)).playerLoseCards(victim, set).playerGainCards(robber, set).hands.map {
           _.map[Int, (Resources, Int)] {

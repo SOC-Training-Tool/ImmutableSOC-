@@ -2,7 +2,7 @@ package soc.moves
 
 import soc.board.{Edge, Vertex}
 import soc.core.Roll
-import soc.inventory.resources.CatanResourceSet.{CatanResourceSet, Resources}
+import soc.inventory.resources.CatanResourceSet.Resources
 import soc.inventory.resources.Steal
 import soc.inventory.{DevelopmentCard, Resource}
 
@@ -39,7 +39,7 @@ sealed trait ImperfectInformation
   case class PortTradeMove(give: Resources, get: Resources) extends CatanTradeMove with MoveResult
   case class PlayerTradeMove(to: Int, give: Resources, get: Resources) extends CatanTradeMove with MoveResult
 
-  case class TradeMove(playerId: Int, give: Resources, get: CatanResourceSet[Int]) extends CatanTradeMove with ImperfectInformation
+  case class TradeMove(playerId: Int, give: Resources, get: Resources) extends CatanTradeMove with ImperfectInformation
   case object AcceptTrade extends TradeResponse
   case object RejectTrade extends TradeResponse
   case class CounterTrade(playerIdGive: Int, give: Resources, playerIdGet: Int, get: Resources) extends TradeResponse
