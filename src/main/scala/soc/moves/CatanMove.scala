@@ -1,5 +1,6 @@
 package soc.moves
 
+import protos.soc.state.Player
 import soc.board.{Edge, Vertex}
 import soc.core.Roll
 import soc.inventory.resources.CatanResourceSet.Resources
@@ -24,9 +25,9 @@ sealed trait ImperfectInformation
 
   case class InitialPlacementMove(first: Boolean, settlement: Vertex, road: Edge) extends CatanMove with MoveResult
 
-  case class DiscardResourcesMove(resourceSet: Map[Int, Resources]) extends CatanMove with MoveResult
+  case class DiscardResourcesMove(player: Player, resourceSet: Resources) extends CatanMove with MoveResult
 
-  case class MoveRobberAndStealMove(node: Int, playerStole: Option[Int]) extends CatanMove with ImperfectInformation
+  case class MoveRobberAndStealMove(node: Int, playerStole: Option[Player]) extends CatanMove with ImperfectInformation
   case class MoveRobberAndStealResult(robberLocation: Int, steal: Option[Steal]) extends MoveResult
 
   case object BuyDevelopmentCardMove extends CatanBuildMove with ImperfectInformation

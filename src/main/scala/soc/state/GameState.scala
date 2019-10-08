@@ -96,10 +96,10 @@ case class GameState[T <: Inventory[T]](
     )
   }
 
-  def playersDiscardFromSeven(discard: DiscardResourcesMove): GameState[T] = playersDiscardFromSeven(discard.resourceSet)
-  def playersDiscardFromSeven(cardsLostMap: Map[Int, Resources]): GameState[T] = {
-    val newTransactions = cardsLostMap.toList.map { case (player, discard) => Lose(player, discard) }
-    val totalLost: Resources = cardsLostMap.values.foldLeft(CatanResourceSet.empty[Int])(_.add(_))
+  def playersDiscardFromSeven(discard: DiscardResourcesMove): GameState[T] = playersDiscardFromSeven(discard.player.position, discard.resourceSet)
+  def playersDiscardFromSeven(player: Int, cardsLost: Resources): GameState[T] = {
+    val newTransactions = List(Lose(player, cardsLost))
+    val totalLost: Resources = cardsLost
     update (
       _.copy(resourceBank = bank.add(totalLost).proto),
       _.updateResources(newTransactions)

@@ -1,0 +1,93 @@
+syntax = "proto2";
+
+package protos.soc;
+
+import "soc/inventory.proto";
+import "soc/board.proto";
+import "soc/state.proto";
+
+enum MoveType {
+    ROLL_DICE = 0;
+    END_TURN = 1;
+    INITIAL_PLACEMENT = 2;
+    DISCARD_RESOURCES = 3;
+    MOVE_ROBBER_AND_STEAL = 4;
+    BUY_DEVELOPMENT_CARD = 5;
+    BUILD_ROAD = 6;
+    BUILD_SETTLEMENT = 7;
+    BUILD_CITY = 8;
+    PORT_TRADE = 9;
+    PLAY_KNIGHT = 10;
+    PLAY_YEAR_OF_PLENTY = 11;
+    PLAY_MONOPOLY = 12;
+    PLAY_ROAD_BUILDER = 13;
+}
+
+message SOCMove {
+    required MoveType type = 1;
+    oneof payload {
+        InitialPlacement initial_placement_payload = 2;
+        DiscardResources discard_resources_payload = 3;
+        MoveRobberAndSteal move_robber_and_steal_payload = 4;
+        BuildRoad build_road_payload = 5;
+        BuildSettlement build_settlement_payload = 6;
+        BuildCity build_city_payload = 7;
+        PortTrade port_trade_payload = 8;
+        MoveRobberAndSteal play_knight_payload = 9;
+        PlayYearOfPlenty play_year_of_plenty_payload = 10;
+        PlayMonopoly play_monopoly_payload = 11;
+        PlayRoadBuilder play_road_builder_payload = 12;
+    }
+}
+
+message RollDice {}
+message EndTurn {}
+
+message InitialPlacement {
+    required Vertex settlement = 1;
+    required Edge road = 2;
+    required bool first_placement = 3;
+}
+
+message DiscardResources {
+    required Player player = 1;
+    repeated ResourceCount resources = 2;
+}
+
+message MoveRobberAndSteal {
+    required Vertex robber_location = 1;
+    optional Player player_to_steal = 2;
+}
+
+message BuyDevelopmentCard {}
+
+message BuildRoad {
+    required Edge edge = 1;
+}
+
+message BuildSettlement {
+    required Vertex vertex = 1;
+}
+
+message BuildCity {
+    required Vertex vertex = 1;
+}
+
+message PortTrade {
+    repeated ResourceCount give = 1;
+    repeated ResourceCount get = 2;
+}
+
+message PlayYearOfPlenty {
+    required Resource res1 = 1;
+    required Resource res2 = 2;
+}
+
+message PlayMonopoly {
+    required Resource res = 1;
+}
+
+message PlayRoadBuilder {
+    required Edge road1 = 1;
+    optional Edge road2 = 2;
+}

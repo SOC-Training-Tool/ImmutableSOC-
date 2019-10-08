@@ -10,12 +10,8 @@ import soc.inventory.Inventory.PerfectInfo
 import soc.inventory.resources.CatanResourceSet
 import soc.inventory._
 import soc.inventory.developmentCard.DevelopmentCardSet._
-import soc.inventory.resources.CatanResourceSet.Resources
-import soc.state.GameState
+import soc.inventory.resources.CatanResourceSet._
 
-/**
-  * Copyright nDimensional, Inc. 2015. All rights reserved.
-  */
 case class CatanPossibleMoves (state: PublicGameState, inventory: PerfectInfo, playerPosition: Int)(implicit gameRules: GameRules) {
 
   val board: CatanBoard = state.board.proto
@@ -109,13 +105,14 @@ case class CatanPossibleMoves (state: PublicGameState, inventory: PerfectInfo, p
       .flatMap { hex =>
         board.playersOnHex(hex.node).filterNot(p => p == currPlayer.position || state.playerStates.get(p).fold(false)(_.publicInventory.cardCount <= 0)) match {
           case Nil => List(MoveRobberAndStealMove(hex.node, None))
-          case list => list.map(n => MoveRobberAndStealMove(hex.node, Some(n)))
+          case list => list.map(n => MoveRobberAndStealMove(hex.node, Some(state.playerStates(n).player)))
         }
       }
   }.toList
-    def getPossibleDiscards(numToDiscard: Int = state.playerStates.get(playerPosition).fold(0)(_.publicInventory.cardCount / 2)) = {
+
+  def getPossibleDiscards(numToDiscard: Int = state.playerStates.get(playerPosition).fold(0)(_.publicInventory.cardCount / 2)) = {
     CatanSet.toList[Resource, Resources](inventory.resourceSet).combinations(numToDiscard).map { resList =>
-      DiscardResourcesMove(Map(playerPosition -> CatanResourceSet.fromList(resList: _*)))
+      DiscardResourcesMove(currPlayer, CatanSet.fromList[Resource, CatanResourceSet[Int]](resList.toList))
     }
   }
 
