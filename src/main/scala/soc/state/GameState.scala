@@ -8,7 +8,7 @@ import soc.board.ProtoImplicits._
 import soc.inventory.ProtoImplicits._
 import soc.core._
 import soc.inventory._
-import soc.inventory.resources.CatanResourceSet.Resources
+import soc.inventory.resources.CatanResourceSet._
 import soc.inventory.resources._
 import soc.moves._
 import soc.state.player._
@@ -96,10 +96,10 @@ case class GameState[T <: Inventory[T]](
     )
   }
 
-  def playersDiscardFromSeven(discard: DiscardResourcesMove): GameState[T] = playersDiscardFromSeven(discard.player.position, discard.resourceSet)
-  def playersDiscardFromSeven(player: Int, cardsLost: Resources): GameState[T] = {
-    val newTransactions = List(Lose(player, cardsLost))
-    val totalLost: Resources = cardsLost
+  def playersDiscardFromSeven(discard: DiscardResourcesResult): GameState[T] = playersDiscardFromSeven(discard.resourceLost)
+  def playersDiscardFromSeven(cardsLost: Map[Int, Resources]): GameState[T] = {
+    val newTransactions: List[SOCTransactions] = cardsLost.toSeq.map { case (pos, res) => Lose(pos, res)}.toList
+    val totalLost: Resources = CatanResourceSet.sum(cardsLost.values.toSeq)
     update (
       _.copy(resourceBank = bank.add(totalLost).proto),
       _.updateResources(newTransactions)
@@ -108,7 +108,7 @@ case class GameState[T <: Inventory[T]](
 
   def moveRobberAndSteal(result: MoveRobberAndStealResult): GameState[T] = moveRobberAndSteal(result.robberLocation, result.steal)
   def moveRobberAndSteal(robberLocation: Int, steal: Option[RobPlayer]): GameState[T] = {
-    val newTransactions = steal.fold(List.empty[SOCTransactions])(s => List(Steal(currentPlayer, s.player.position, s.res.map(CatanResourceSet.fromList(_)))))
+    val newTransactions = steal.fold(List.empty[SOCTransactions])(s => List(Steal(currentPlayer, s.player, s.res.map(CatanResourceSet.fromList(_)))))
     update (
       _.copy(board = board.copy(robberHex = robberLocation).proto),
       _.updateResources(newTransactions)
@@ -246,6 +246,7 @@ case class GameState[T <: Inventory[T]](
     case r: YearOfPlentyMove => playYearOfPlenty(r)
     case r: MonopolyResult => playMonopoly(r)
     case r: RoadBuilderMove => playRoadBuilder(r)
+    case r: DiscardResourcesResult => playersDiscardFromSeven(r)
     case _ => this
   }
 }
