@@ -107,8 +107,8 @@ case class GameState[T <: Inventory[T]](
   }
 
   def moveRobberAndSteal(result: MoveRobberAndStealResult): GameState[T] = moveRobberAndSteal(result.robberLocation, result.steal)
-  def moveRobberAndSteal(robberLocation: Int, steal: Option[Steal]): GameState[T] = {
-    val newTransactions = steal.fold(List.empty[SOCTransactions])(s => List(s))
+  def moveRobberAndSteal(robberLocation: Int, steal: Option[RobPlayer]): GameState[T] = {
+    val newTransactions = steal.fold(List.empty[SOCTransactions])(s => List(Steal(currentPlayer, s.player.position, s.res.map(CatanResourceSet.fromList(_)))))
     update (
       _.copy(board = board.copy(robberHex = robberLocation).proto),
       _.updateResources(newTransactions)
@@ -155,7 +155,7 @@ case class GameState[T <: Inventory[T]](
   }
 
   def playKnight(result: KnightResult): GameState[T] = playKnight(result.robber.robberLocation, result.robber.steal)
-  def playKnight(robberLocation: Int, steal: Option[Steal]): GameState[T] = {
+  def playKnight(robberLocation: Int, steal: Option[RobPlayer]): GameState[T] = {
     update(
       _.copy(),
       _.playKnight(currentPlayer, turnNumber)

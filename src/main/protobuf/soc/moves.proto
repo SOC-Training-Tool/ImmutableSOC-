@@ -6,7 +6,7 @@ import "soc/inventory.proto";
 import "soc/board.proto";
 import "soc/state.proto";
 
-enum MoveType {
+enum ActionType {
     ROLL_DICE = 0;
     END_TURN = 1;
     INITIAL_PLACEMENT = 2;
@@ -23,8 +23,16 @@ enum MoveType {
     PLAY_ROAD_BUILDER = 13;
 }
 
-message SOCMove {
-    required MoveType type = 1;
+message HiddenCard {
+    repeated Player viewable_by = 1;
+    oneof card {
+        Resource resource_card = 2;
+        DevelopmentCard development_card = 3;
+    }
+}
+
+message ActionSpecification {
+    required ActionType type = 1;
     oneof payload {
         InitialPlacement initial_placement_payload = 2;
         DiscardResources discard_resources_payload = 3;
@@ -40,8 +48,28 @@ message SOCMove {
     }
 }
 
-message RollDice {}
-message EndTurn {}
+message ActionResult {
+    required ActionType type = 1;
+    oneof payload {
+        RollDice roll_dice_payload = 2;
+        InitialPlacement initial_placement_payload = 3;
+        DiscardResourcesResult discard_resources_payload = 4;
+        MoveRobberAndStealResult move_robber_and_steal_payload = 5;
+        BuildRoad build_road_payload = 6;
+        BuildSettlement build_settlement_payload = 7;
+        BuildCity build_city_payload = 8;
+        PortTrade port_trade_payload = 9;
+        BuyDevelopmentCard buy_development_card_payload = 10;
+        MoveRobberAndStealResult play_knight_payload = 11;
+        PlayYearOfPlenty play_year_of_plenty_payload = 12;
+        PlayMonopolyResult play_monopoly_payload = 13;
+        PlayRoadBuilder play_road_builder_payload = 14;
+    }
+}
+
+message RollDice {
+    required int32 roll = 1;
+}
 
 message InitialPlacement {
     required Vertex settlement = 1;
@@ -54,12 +82,28 @@ message DiscardResources {
     repeated ResourceCount resources = 2;
 }
 
+message DiscardResourcesResult {
+    repeated DiscardResources discards = 1;
+}
+
 message MoveRobberAndSteal {
     required Vertex robber_location = 1;
     optional Player player_to_steal = 2;
 }
 
-message BuyDevelopmentCard {}
+message MoveRobberAndStealResult {
+    message StealResource {
+        required Player player_robbed = 1;
+        required HiddenCard card_stolen = 2;
+    }
+    required Vertex robber_location = 1;
+    optional StealResource steal = 2;
+
+}
+
+message BuyDevelopmentCard {
+    required HiddenCard development_card = 1;
+}
 
 message BuildRoad {
     required Edge edge = 1;
@@ -85,6 +129,10 @@ message PlayYearOfPlenty {
 
 message PlayMonopoly {
     required Resource res = 1;
+}
+
+message PlayMonopolyResult {
+    map<int32, ResourceCount> cards_lost = 1;
 }
 
 message PlayRoadBuilder {
