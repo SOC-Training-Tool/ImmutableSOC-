@@ -49,6 +49,8 @@ object CatanResourceSet {
     }
   }
 
+  def sum[T: Numeric](ls: Seq[CatanResourceSet[T]]): ResourceSet[T] = ls.foldLeft(CatanResourceSet.empty[T]) { case(total, set) => total.add(set) }
+
   def describe(set: Resources): String = {
     set.amountMap.filter(_._2 > 0).toSeq.map { case (res, amt) => s"$amt ${res.name}s"}.mkString(", ")
   }

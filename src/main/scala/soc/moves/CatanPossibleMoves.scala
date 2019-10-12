@@ -105,14 +105,14 @@ case class CatanPossibleMoves (state: PublicGameState, inventory: PerfectInfo, p
       .flatMap { hex =>
         board.playersOnHex(hex.node).filterNot(p => p == currPlayer.position || state.playerStates.get(p).fold(false)(_.publicInventory.cardCount <= 0)) match {
           case Nil => List(MoveRobberAndStealMove(hex.node, None))
-          case list => list.map(n => MoveRobberAndStealMove(hex.node, Some(state.playerStates(n).player)))
+          case list => list.map(n => MoveRobberAndStealMove(hex.node, Some(n)))
         }
       }
   }.toList
 
   def getPossibleDiscards(numToDiscard: Int = state.playerStates.get(playerPosition).fold(0)(_.publicInventory.cardCount / 2)) = {
     CatanSet.toList[Resource, Resources](inventory.resourceSet).combinations(numToDiscard).map { resList =>
-      DiscardResourcesMove(currPlayer, CatanSet.fromList[Resource, CatanResourceSet[Int]](resList.toList))
+      DiscardResourcesMove(CatanSet.fromList[Resource, CatanResourceSet[Int]](resList.toList))
     }
   }
 

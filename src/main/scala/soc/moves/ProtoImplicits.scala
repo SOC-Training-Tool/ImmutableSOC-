@@ -1,10 +1,10 @@
 package soc.moves
 
+import protos.soc.moves._
+import protos.soc.moves.ActionEvent.Specification._
 import protos.soc.moves.ActionType._
-import protos.soc.moves.ActionSpecification.{Payload => APayload}
-import protos.soc.moves.ActionResult.{Payload => RPayload}
-import protos.soc.moves.MoveRobberAndStealResult.StealResource
-import protos.soc.moves.{ActionResult => PResult, ActionSpecification => PAction, DiscardResourcesResult => PDiscardResult, MoveRobberAndStealResult => PMoveRobber, _}
+import protos.soc.moves.HiddenCard.Card.{DevelopmentCard, ResourceCard}
+import protos.soc.moves.ResourceTransaction.TransactionType._
 import protos.soc.state.Player
 import soc.board.ProtoImplicits._
 import soc.board.BaseCatanBoard.baseBoardMapping
@@ -12,153 +12,163 @@ import soc.board.Vertex
 import soc.core.Roll
 import soc.proto.ProtoCoder.ops.{proto, _}
 import soc.inventory.ProtoImplicits._
-import soc.inventory.resources.Steal
+import soc.inventory.resources.{Lose, Steal}
 import soc.proto.ProtoCoder
 
 object ProtoImplicits {
 
-  implicit val protoMoveRobberAndSteal: ProtoCoder[MoveRobberAndStealMove, MoveRobberAndSteal] = { m =>
-    val vertex = Vertex(m.node).proto
-    MoveRobberAndSteal(vertex, m.playerStole)
-  }
-
-  implicit def protoAction[U <: CatanMove]: ProtoCoder[U, PAction] = move => move match {
-    case RollDiceMove => PAction(ROLL_DICE)
-    case EndTurnMove => PAction(END_TURN)
-    case BuyDevelopmentCardMove => PAction(BUY_DEVELOPMENT_CARD)
+  implicit def protoAction[U <: CatanMove]: ProtoCoder[U, ActionEvent] = move => move match {
+    case RollDiceMove => ActionEvent(ROLL_DICE)
+    case EndTurnMove => ActionEvent(END_TURN)
     case InitialPlacementMove(first, settlement, road) =>
-      PAction(INITIAL_PLACEMENT, APayload.InitialPlacementPayload(InitialPlacement(settlement.proto, road.proto, first)))
+      ActionEvent(INITIAL_PLACEMENT, None, InitialPlacementPayload(InitialPlacement(settlement.proto, road.proto, first)))
+    case DiscardResourcesMove(res) =>
+      ActionEvent(DISCARD_RESOURCES, None, DiscardResourcesPayload(DiscardResources(res.proto)))
+    case MoveRobberAndStealMove(node, playerStole) =>
+      ActionEvent(MOVE_ROBBER_AND_STEAL, None, MoveRobberAndStealPayload(MoveRobberAndSteal(Vertex(node).proto, playerStole)))
+    case BuyDevelopmentCardMove => ActionEvent(BUY_DEVELOPMENT_CARD)
     case BuildSettlementMove(vertex) =>
-      PAction(BUILD_SETTLEMENT, APayload.BuildSettlementPayload(BuildSettlement(vertex.proto)))
+      ActionEvent(BUILD_SETTLEMENT, None, BuildSettlementPayload(BuildSettlement(vertex.proto)))
     case BuildCityMove(vertex) =>
-      PAction(BUILD_CITY, APayload.BuildCityPayload(BuildCity(vertex.proto)))
+      ActionEvent(BUILD_CITY, None, BuildCityPayload(BuildCity(vertex.proto)))
     case BuildRoadMove(edge) =>
-      PAction(BUILD_ROAD, APayload.BuildRoadPayload(BuildRoad(edge.proto)))
-    case m: MoveRobberAndStealMove =>
-      PAction(MOVE_ROBBER_AND_STEAL, APayload.MoveRobberAndStealPayload(proto[MoveRobberAndStealMove, MoveRobberAndSteal](m)))
+      ActionEvent(BUILD_ROAD, None, BuildRoadPayload(BuildRoad(edge.proto)))
     case PortTradeMove(give, get) =>
-      PAction(PORT_TRADE, APayload.PortTradePayload(PortTrade(give.proto, get.proto)))
-    case KnightMove(moveRobberAndStealMove) =>
-      PAction(PLAY_KNIGHT, APayload.PlayKnightPayload(proto[MoveRobberAndStealMove, MoveRobberAndSteal](moveRobberAndStealMove)))
+      ActionEvent(PORT_TRADE, None, PortTradePayload(PortTrade(give.proto, get.proto)))
+    case KnightMove(MoveRobberAndStealMove(node, playerStole)) =>
+      ActionEvent(PLAY_KNIGHT, None, PlayKnightPayload(MoveRobberAndSteal(Vertex(node).proto, playerStole)))
+    case YearOfPlentyMove(res1, res2) =>
+      ActionEvent(PLAY_YEAR_OF_PLENTY, None, PlayYearOfPlentyPayload(PlayYearOfPlenty(res1.proto, res2.proto)))
     case MonopolyMove(res) =>
-      PAction(PLAY_MONOPOLY, APayload.PlayMonopolyPayload(PlayMonopoly(res.proto)))
-    case YearOfPlentyMove(res1, res2) =>
-      PAction(PLAY_YEAR_OF_PLENTY, APayload.PlayYearOfPlentyPayload(PlayYearOfPlenty(res1.proto, res2.proto)))
-    case RoadBuilderMove(edge1, edge2) =>
-      PAction(PLAY_ROAD_BUILDER, APayload.PlayRoadBuilderPayload(PlayRoadBuilder(edge1.proto, edge2.map(_.proto))))
-    case DiscardResourcesMove(player, resourceSet) =>
-      PAction(DISCARD_RESOURCES, APayload.DiscardResourcesPayload(DiscardResources(player, resourceSet.proto)))
-    case _ => PAction(ActionType.END_TURN)
+      ActionEvent(PLAY_MONOPOLY, None, PlayMonopolyPayload(PlayMonopoly(res.proto)))
+    case RoadBuilderMove(road1, road2) =>
+      ActionEvent(PLAY_ROAD_BUILDER, None, PlayRoadBuilderPayload(PlayRoadBuilder(road1.proto, road2.map(_.proto))))
   }
 
-  implicit val moveFromProto: ProtoCoder[PAction, CatanMove] = pMove => pMove match {
-    case PAction(ROLL_DICE, _) => RollDiceMove
-    case PAction(END_TURN, _) => EndTurnMove
-    case PAction(BUY_DEVELOPMENT_CARD, _) => BuyDevelopmentCardMove
-    case PAction(INITIAL_PLACEMENT, APayload.InitialPlacementPayload(InitialPlacement(settlement, road, first))) =>
+  implicit val actionFromProto: ProtoCoder[ActionEvent, CatanMove] = pMove => pMove match {
+    case ActionEvent(ROLL_DICE, _, _) => RollDiceMove
+    case ActionEvent(END_TURN, _, _) => EndTurnMove
+    case ActionEvent(INITIAL_PLACEMENT, None, InitialPlacementPayload(InitialPlacement(settlement, road, first))) =>
       InitialPlacementMove(first, settlement.proto, road.proto)
-    case PAction(BUILD_SETTLEMENT, APayload.BuildSettlementPayload(BuildSettlement(vertex))) =>
+    case  ActionEvent(DISCARD_RESOURCES, None, DiscardResourcesPayload(DiscardResources(resources))) =>
+      DiscardResourcesMove(resources.proto)
+    case ActionEvent(MOVE_ROBBER_AND_STEAL, None, MoveRobberAndStealPayload(MoveRobberAndSteal(vertex, playerStole))) =>
+      MoveRobberAndStealMove(vertex.proto.node, playerStole)
+    case ActionEvent(BUY_DEVELOPMENT_CARD, _, _) => BuyDevelopmentCardMove
+    case ActionEvent(BUILD_SETTLEMENT, None, BuildSettlementPayload(BuildSettlement(vertex))) =>
       BuildSettlementMove(vertex.proto)
-    case PAction(BUILD_CITY, APayload.BuildCityPayload(BuildCity(vertex))) =>
+    case ActionEvent(BUILD_CITY, None, BuildCityPayload(BuildCity(vertex))) =>
       BuildCityMove(vertex.proto)
-    case PAction(BUILD_ROAD, APayload.BuildRoadPayload(BuildRoad(edge))) =>
+    case ActionEvent(BUILD_ROAD, None, BuildRoadPayload(BuildRoad(edge))) =>
       BuildRoadMove(edge.proto)
-    case PAction(MOVE_ROBBER_AND_STEAL, APayload.MoveRobberAndStealPayload(MoveRobberAndSteal(robberLoc, player))) =>
-      MoveRobberAndStealMove(robberLoc.proto.node, player)
-    case PAction(PORT_TRADE, APayload.PortTradePayload(PortTrade(give, get))) =>
+    case ActionEvent(PORT_TRADE, None, PortTradePayload(PortTrade(give, get))) =>
       PortTradeMove(give.proto, get.proto)
-    case PAction(PLAY_KNIGHT, APayload.PlayKnightPayload(MoveRobberAndSteal(robberLoc, player))) =>
-      KnightMove(MoveRobberAndStealMove(robberLoc.proto.node, player))
-    case PAction(PLAY_MONOPOLY, APayload.PlayMonopolyPayload(PlayMonopoly(res))) =>
+    case ActionEvent(PLAY_KNIGHT, None, PlayKnightPayload(MoveRobberAndSteal(vertex, playerStole))) =>
+      KnightMove(MoveRobberAndStealMove(vertex.proto.node, playerStole))
+    case ActionEvent(PLAY_YEAR_OF_PLENTY, None, PlayYearOfPlentyPayload(PlayYearOfPlenty(res1, res2))) =>
+      YearOfPlentyMove(res1.proto, res2.proto)
+    case ActionEvent(PLAY_MONOPOLY, None, PlayMonopolyPayload(PlayMonopoly(res))) =>
       MonopolyMove(res.proto)
-    case PAction(PLAY_YEAR_OF_PLENTY, APayload.PlayYearOfPlentyPayload(PlayYearOfPlenty(res1, res2))) =>
-      YearOfPlentyMove(res1.proto, res2.proto)
-    case PAction(PLAY_ROAD_BUILDER, APayload.PlayRoadBuilderPayload(PlayRoadBuilder(edge1, edge2))) =>
-      RoadBuilderMove(edge1.proto, edge2.map(_.proto))
-    case PAction(DISCARD_RESOURCES, APayload.DiscardResourcesPayload(DiscardResources(player, resourceSet))) =>
-      DiscardResourcesMove(player, resourceSet.proto)
-    case _ => EndTurnMove
+    case ActionEvent(PLAY_ROAD_BUILDER, None, PlayRoadBuilderPayload(PlayRoadBuilder(road1, road2))) =>
+      RoadBuilderMove(road1.proto, road2.map(_.proto))
   }
 
-  implicit val protoMoveRobberAndStealResult: ProtoCoder[MoveRobberAndStealResult, PMoveRobber] = { m =>
-    val (viewableBy, robberLocation, steal) = MoveRobberAndStealResult.unapply(m).get
-    PMoveRobber(Vertex(robberLocation).proto, steal.map { s =>
-      StealResource(s.player, HiddenCard(viewableBy, s.res.fold[HiddenCard.Card](HiddenCard.Card.Empty)(r => HiddenCard.Card.ResourceCard(r.proto))))
-    })
-  }
-
-  implicit def protoResult[U <: MoveResult]: ProtoCoder[U, PResult] = result => result match {
+  implicit def protoResult[U <: MoveResult]: ProtoCoder[U, ActionEvent] = move => move match {
     case RollResult(roll) =>
-      PResult(ROLL_DICE, RPayload.RollDicePayload(RollDice(roll.number)))
-    case EndTurnMove => PResult(END_TURN)
+      val result = Some(ActionResult(roll = Some(roll.number)))
+      ActionEvent(ROLL_DICE, result)
+    case EndTurnMove => ActionEvent(END_TURN)
     case InitialPlacementMove(first, settlement, road) =>
-      PResult(INITIAL_PLACEMENT, RPayload.InitialPlacementPayload(InitialPlacement(settlement.proto, road.proto, first)))
-    case DiscardResourcesResult(cardsLost) =>
-      PResult(DISCARD_RESOURCES, RPayload.DiscardResourcesPayload(
-        PDiscardResult(cardsLost.toSeq.map { case (player, res) =>
-          DiscardResources(player, res.proto)
-        })
-      ))
-    case moveRobberAndStealResult: MoveRobberAndStealResult =>
-      PResult(MOVE_ROBBER_AND_STEAL, RPayload.MoveRobberAndStealPayload(proto[MoveRobberAndStealResult, PMoveRobber](moveRobberAndStealResult)))
+      ActionEvent(INITIAL_PLACEMENT, None, InitialPlacementPayload(InitialPlacement(settlement.proto, road.proto, first)))
+    case DiscardResourcesResult(resMap) =>
+      val result = Some(ActionResult(resourceTransactions = resMap.view.mapValues(r => ResourceTransaction(LOSE, r.proto)).toMap))
+      ActionEvent(DISCARD_RESOURCES, result)
+
+    case MoveRobberAndStealResult(viewableBy, node, steal) =>
+      val result = steal.map { p =>
+        ActionResult(hiddenCard = Some(HiddenCard(viewableBy, p.res.fold[HiddenCard.Card](HiddenCard.Card.Empty)(r => ResourceCard(r.proto)))))
+      }
+      val playerStole = steal.map(_.player)
+      ActionEvent(MOVE_ROBBER_AND_STEAL, result, MoveRobberAndStealPayload(MoveRobberAndSteal(Vertex(node).proto, playerStole)))
     case BuyDevelopmentCardResult(viewableBy, card) =>
-      PResult(BUY_DEVELOPMENT_CARD, RPayload.BuyDevelopmentCardPayload(
-        BuyDevelopmentCard(HiddenCard(viewableBy, card.fold[HiddenCard.Card](HiddenCard.Card.Empty)(r => HiddenCard.Card.DevelopmentCard(r.proto))))
-      ))
+      val result = card.map ( c => ActionResult(hiddenCard = Some(HiddenCard(viewableBy, DevelopmentCard(c.proto)))) )
+      ActionEvent(BUY_DEVELOPMENT_CARD, result)
     case BuildSettlementMove(vertex) =>
-      PResult(BUILD_SETTLEMENT, RPayload.BuildSettlementPayload(BuildSettlement(vertex.proto)))
+      ActionEvent(BUILD_SETTLEMENT, None, BuildSettlementPayload(BuildSettlement(vertex.proto)))
     case BuildCityMove(vertex) =>
-      PResult(BUILD_CITY, RPayload.BuildCityPayload(BuildCity(vertex.proto)))
+      ActionEvent(BUILD_CITY, None, BuildCityPayload(BuildCity(vertex.proto)))
     case BuildRoadMove(edge) =>
-      PResult(BUILD_ROAD, RPayload.BuildRoadPayload(BuildRoad(edge.proto)))
+      ActionEvent(BUILD_ROAD, None, BuildRoadPayload(BuildRoad(edge.proto)))
     case PortTradeMove(give, get) =>
-      PResult(PORT_TRADE, RPayload.PortTradePayload(PortTrade(give.proto, get.proto)))
-    case KnightResult(moveRobberAndStealResult) =>
-      PResult(PLAY_KNIGHT, RPayload.PlayKnightPayload(proto[MoveRobberAndStealResult, PMoveRobber](moveRobberAndStealResult)))
-    case MonopolyResult(resLost) =>
-      PResult(PLAY_MONOPOLY, RPayload.PlayMonopolyPayload(PlayMonopolyResult(resLost.view.mapValues(_.proto.headOption.get).toMap)))
+      ActionEvent(PORT_TRADE, None, PortTradePayload(PortTrade(give.proto, get.proto)))
+    case KnightResult( MoveRobberAndStealResult(viewableBy, node, steal)) =>
+      val result = steal.map { p =>
+        ActionResult(hiddenCard = Some(HiddenCard(viewableBy, p.res.fold[HiddenCard.Card](HiddenCard.Card.Empty)(r => ResourceCard(r.proto)))))
+      }
+      val playerStole = steal.map(_.player)
+      ActionEvent(PLAY_KNIGHT, result, PlayKnightPayload(MoveRobberAndSteal(Vertex(node).proto, playerStole)))
     case YearOfPlentyMove(res1, res2) =>
-      PResult(PLAY_YEAR_OF_PLENTY, RPayload.PlayYearOfPlentyPayload(PlayYearOfPlenty(res1.proto, res2.proto)))
-    case RoadBuilderMove(edge1, edge2) =>
-      PResult(PLAY_ROAD_BUILDER, RPayload.PlayRoadBuilderPayload(PlayRoadBuilder(edge1.proto, edge2.map(_.proto))))
-    case _ => PResult(END_TURN)
+      ActionEvent(PLAY_YEAR_OF_PLENTY, None, PlayYearOfPlentyPayload(PlayYearOfPlenty(res1.proto, res2.proto)))
+    case MonopolyResult(cardsLost) =>
+      val result = Some(ActionResult(resourceTransactions = cardsLost.view.mapValues(r => ResourceTransaction(LOSE, r.proto)).toMap))
+      ActionEvent(PLAY_MONOPOLY, result)
+    case RoadBuilderMove(road1, road2) =>
+      ActionEvent(PLAY_ROAD_BUILDER, None, PlayRoadBuilderPayload(PlayRoadBuilder(road1.proto, road2.map(_.proto))))
   }
 
-  implicit val resultFromProto: ProtoCoder[PResult, MoveResult] = pResult => pResult match {
-    case PResult(ROLL_DICE, RPayload.RollDicePayload(RollDice(number))) => RollResult(Roll(number))
-    case PResult(END_TURN, _) => EndTurnMove
-    case PResult(INITIAL_PLACEMENT, RPayload.InitialPlacementPayload(InitialPlacement(settlement, road, first))) =>
+  implicit val resultFromProto: ProtoCoder[ActionEvent, MoveResult] = pMove => pMove match {
+    // public actions
+    case ActionEvent(ROLL_DICE, Some(ActionResult(Some(number), None, _)), _) => RollResult(Roll(number))
+    case ActionEvent(END_TURN, _, _) => EndTurnMove
+    case ActionEvent(INITIAL_PLACEMENT, None, InitialPlacementPayload(InitialPlacement(settlement, road, first))) =>
       InitialPlacementMove(first, settlement.proto, road.proto)
-    case PResult(DISCARD_RESOURCES, RPayload.DiscardResourcesPayload(PDiscardResult(discards))) =>
-      DiscardResourcesResult(discards.map { case  DiscardResources(player, res) => player -> res.proto }.toMap)
-    case PResult(MOVE_ROBBER_AND_STEAL, RPayload.MoveRobberAndStealPayload(PMoveRobber(vertex, steal))) =>
-      MoveRobberAndStealResult(
-        steal.fold[Seq[Player]](Nil)(_.cardStolen.viewableBy),
-        vertex.proto.node,
-        steal.map(s => RobPlayer(s.playerRobbed, s.cardStolen.card.resourceCard.map(_.proto)))
-      )
-    case PResult(BUY_DEVELOPMENT_CARD, RPayload.BuyDevelopmentCardPayload(BuyDevelopmentCard(HiddenCard(viewableBy, card)))) =>
-      BuyDevelopmentCardResult(viewableBy, card.developmentCard.map(_.proto))
-    case PResult(BUILD_SETTLEMENT, RPayload.BuildSettlementPayload(BuildSettlement(vertex))) =>
+    case ActionEvent(DISCARD_RESOURCES, Some(ActionResult(None, None, discards)), _) =>
+      DiscardResourcesResult(discards.view.mapValues { case ResourceTransaction(ResourceTransaction.TransactionType.LOSE, res) => res.proto }.toMap)
+    case ActionEvent(BUILD_SETTLEMENT, None, BuildSettlementPayload(BuildSettlement(vertex))) =>
       BuildSettlementMove(vertex.proto)
-    case PResult(BUILD_CITY, RPayload.BuildCityPayload(BuildCity(vertex))) =>
+    case ActionEvent(BUILD_CITY, None, BuildCityPayload(BuildCity(vertex))) =>
       BuildCityMove(vertex.proto)
-    case PResult(BUILD_ROAD, RPayload.BuildRoadPayload(BuildRoad(edge))) =>
+    case ActionEvent(BUILD_ROAD, None, BuildRoadPayload(BuildRoad(edge))) =>
       BuildRoadMove(edge.proto)
-    case PResult(PORT_TRADE, RPayload.PortTradePayload(PortTrade(give, get))) =>
+    case ActionEvent(PORT_TRADE, None, PortTradePayload(PortTrade(give, get))) =>
       PortTradeMove(give.proto, get.proto)
-    case PResult(PLAY_KNIGHT, RPayload.PlayKnightPayload(PMoveRobber(vertex, steal))) =>
-      KnightResult(MoveRobberAndStealResult(
-        steal.fold[Seq[Player]](Nil)(_.cardStolen.viewableBy),
-        vertex.proto.node,
-        steal.map(s => RobPlayer(s.playerRobbed, s.cardStolen.card.resourceCard.map(_.proto)))
-      ))
-    case PResult(PLAY_MONOPOLY, RPayload.PlayMonopolyPayload(PlayMonopolyResult(resLost))) =>
-      MonopolyResult(resLost.view.mapValues(Seq(_).proto).toMap)
-    case PResult(PLAY_YEAR_OF_PLENTY, RPayload.PlayYearOfPlentyPayload(PlayYearOfPlenty(res1, res2))) =>
+    case ActionEvent(PLAY_YEAR_OF_PLENTY, None, PlayYearOfPlentyPayload(PlayYearOfPlenty(res1, res2))) =>
       YearOfPlentyMove(res1.proto, res2.proto)
-    case PResult(PLAY_ROAD_BUILDER, RPayload.PlayRoadBuilderPayload(PlayRoadBuilder(edge1, edge2))) =>
-      RoadBuilderMove(edge1.proto, edge2.map(_.proto))
-    case _ => EndTurnMove
+    case ActionEvent(PLAY_ROAD_BUILDER, None, PlayRoadBuilderPayload(PlayRoadBuilder(road1, road2))) =>
+      RoadBuilderMove(road1.proto, road2.map(_.proto))
+    case ActionEvent(PLAY_MONOPOLY, Some(ActionResult(None, None, cardsLost)), PlayMonopolyPayload(PlayMonopoly(res))) =>
+      MonopolyResult(cardsLost.view.mapValues { case ResourceTransaction(ResourceTransaction.TransactionType.LOSE, res) => res.proto }.toMap)
+
+    // actions with private info
+
+    // No card was stolen
+    case ActionEvent(MOVE_ROBBER_AND_STEAL, None, MoveRobberAndStealPayload(MoveRobberAndSteal(vertex, None))) =>
+      MoveRobberAndStealResult(Nil, vertex.proto.node, None)
+    // Card was stolen but card is not viewable
+    case ActionEvent(MOVE_ROBBER_AND_STEAL, Some(ActionResult(None, Some(HiddenCard(viewableBy, HiddenCard.Card.Empty)), _)), MoveRobberAndStealPayload(MoveRobberAndSteal(vertex, Some(playerStole)))) =>
+      MoveRobberAndStealResult(viewableBy, vertex.proto.node, Some(RobPlayer(playerStole, None)))
+    // Card was stolen and card is viewable
+    case ActionEvent(MOVE_ROBBER_AND_STEAL, Some(ActionResult(None, Some(HiddenCard(viewableBy, ResourceCard(res))), _)), MoveRobberAndStealPayload(MoveRobberAndSteal(vertex, Some(playerStole)))) =>
+      MoveRobberAndStealResult(viewableBy, vertex.proto.node, Some(RobPlayer(playerStole, Some(res.proto))))
+
+    // No card was stolen
+    case ActionEvent(PLAY_KNIGHT, None, PlayKnightPayload(MoveRobberAndSteal(vertex, None))) =>
+      KnightResult(MoveRobberAndStealResult(Nil, vertex.proto.node, None))
+    // Card was stolen but card is not viewable
+    case ActionEvent(PLAY_KNIGHT, Some(ActionResult(None, Some(HiddenCard(viewableBy, HiddenCard.Card.Empty)), _)), PlayKnightPayload(MoveRobberAndSteal(vertex, Some(playerStole)))) =>
+      KnightResult(MoveRobberAndStealResult(viewableBy, vertex.proto.node, Some(RobPlayer(playerStole, None))))
+    // Card was stolen and card is viewable
+    case ActionEvent(PLAY_KNIGHT, Some(ActionResult(None, Some(HiddenCard(viewableBy, ResourceCard(res))), _)), PlayKnightPayload(MoveRobberAndSteal(vertex, Some(playerStole)))) =>
+      KnightResult(MoveRobberAndStealResult(viewableBy, vertex.proto.node, Some(RobPlayer(playerStole, Some(res.proto)))))
+
+    // No development cards left in deck
+    case ActionEvent(BUY_DEVELOPMENT_CARD, Some(ActionResult(None, None, _)), _) =>
+      BuyDevelopmentCardResult(Nil, None)
+    // development card was bought but card is not viewable
+    case ActionEvent(BUY_DEVELOPMENT_CARD, Some(ActionResult(None, Some(HiddenCard(viewableBy, HiddenCard.Card.Empty)),_)), _) =>
+      BuyDevelopmentCardResult(viewableBy, None)
+    case ActionEvent(BUY_DEVELOPMENT_CARD, Some(ActionResult(None, Some(HiddenCard(viewableBy, DevelopmentCard(dev))), _)), _) =>
+      BuyDevelopmentCardResult(viewableBy, Some(dev.proto))
   }
+
 }
