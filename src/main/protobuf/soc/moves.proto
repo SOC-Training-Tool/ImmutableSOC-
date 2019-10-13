@@ -6,7 +6,7 @@ import "soc/inventory.proto";
 import "soc/board.proto";
 import "soc/state.proto";
 
-enum ActionType {
+enum GameAction {
     ROLL_DICE = 0;
     END_TURN = 1;
     INITIAL_PLACEMENT = 2;
@@ -47,8 +47,8 @@ message ActionResult {
 
 }
 
-message ActionEvent {
-    required ActionType type = 1;
+message GameEvent {
+    required GameAction type = 1;
     oneof specification {
         InitialPlacement initial_placement_payload = 2;
         DiscardResources discard_resources_payload = 3;
@@ -98,12 +98,12 @@ message PortTrade {
 }
 
 message PlayYearOfPlenty {
-    required Resource res1 = 1;
-    required Resource res2 = 2;
+    required Resource resource1 = 1;
+    required Resource resource2 = 2;
 }
 
 message PlayMonopoly {
-    required Resource res = 1;
+    required Resource resource = 1;
 }
 
 message PlayRoadBuilder {
