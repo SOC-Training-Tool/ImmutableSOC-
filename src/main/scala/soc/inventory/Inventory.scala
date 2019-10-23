@@ -1,6 +1,6 @@
 package soc.inventory
 
-import Inventory.{NoInfo, PerfectInfo, ProbableInfo}
+import Inventory.{PublicInfo, PerfectInfo, ProbableInfo}
 import soc.inventory.developmentCard._
 import soc.inventory.developmentCard.DevelopmentCardSet._
 import soc.inventory.resources._
@@ -19,13 +19,13 @@ trait Inventory[T <: Inventory[T]] { self: T =>
   def updateResources(position: Int, update: UpdateRes): T
   def updateDevelopmentCard(turn: Int, position: Int, update: UpdateDev): T
 
-  def toPublicInfo: NoInfo
+  def toPublicInfo: PublicInfo
 }
 
 case object Inventory {
   type PerfectInfo = PerfectInfoInventory
   type ProbableInfo = ProbableInfoInventory
-  type NoInfo = NoInfoInventory
+  type PublicInfo = PublicInfoInventory
 }
 
 
@@ -68,20 +68,20 @@ case class PerfectInfoInventory(
 
   override def canBuild(resSet: Resources): Boolean = resourceSet.contains(resSet)
 
-  override def toPublicInfo: NoInfo = NoInfoInventory(playedDevCards, numCards, numUnplayedDevCards)
+  override def toPublicInfo: PublicInfo = PublicInfoInventory(playedDevCards, numCards, numUnplayedDevCards)
 
   override val playedDevCards: DevelopmentCardSpecificationSet = developmentCards.filterPlayed
 }
 
-case class NoInfoInventory(
+case class PublicInfoInventory(
   playedDevCards: DevelopmentCardSpecificationSet = DevelopmentCardSpecificationSet(),
   numCards: Int = 0,
-  numUnplayedDevCards: Int = 0) extends Inventory[NoInfo] {
+  numUnplayedDevCards: Int = 0) extends Inventory[PublicInfo] {
 
   type UpdateRes = List[SOCTransactions]
   type UpdateDev = DevCardTransaction
 
-  override def updateResources(position: Int, transactions: List[SOCTransactions]): NoInfoInventory = {
+  override def updateResources(position: Int, transactions: List[SOCTransactions]): PublicInfoInventory = {
     val numCrds = transactions.foldLeft(numCards) {
       case (num, Gain(`position`, set)) => num + set.getTotal
       case (num, Lose(`position`, set)) => num - set.getTotal
@@ -92,7 +92,7 @@ case class NoInfoInventory(
     copy(numCards = numCrds)
   }
 
-  override def updateDevelopmentCard(turn: Int, position: Int, transaction: DevCardTransaction): NoInfoInventory = {
+  override def updateDevelopmentCard(turn: Int, position: Int, transaction: DevCardTransaction): PublicInfoInventory = {
     transaction match {
       case BuyDevelopmentCard(`position`, Some(card)) =>
         copy(numUnplayedDevCards = numUnplayedDevCards + 1)
@@ -106,11 +106,11 @@ case class NoInfoInventory(
 
   }
 
-  override def endTurn: NoInfoInventory = copy()
+  override def endTurn: PublicInfoInventory = copy()
 
   override def canBuild(resSet: Resources): Boolean = true
 
-  override def toPublicInfo: NoInfo = this
+  override def toPublicInfo: PublicInfo = this
 }
 
 case class ProbableInfoInventory(
@@ -141,5 +141,5 @@ case class ProbableInfoInventory(
     )
   }
 
-  override def toPublicInfo: NoInfo = NoInfoInventory(playedDevCards, numCards, numUnplayedDevCards)
+  override def toPublicInfo: PublicInfo = PublicInfoInventory(playedDevCards, numCards, numUnplayedDevCards)
 }

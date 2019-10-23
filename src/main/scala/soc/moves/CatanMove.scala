@@ -1,10 +1,8 @@
 package soc.moves
 
-import protos.soc.state.Player
 import soc.board.{Edge, Vertex}
 import soc.core.Roll
 import soc.inventory.resources.CatanResourceSet.Resources
-import soc.inventory.resources.Steal
 import soc.inventory.{DevelopmentCard, Resource}
 
 case class RobPlayer(player: Int, res: Option[Resource])

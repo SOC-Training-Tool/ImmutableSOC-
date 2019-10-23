@@ -11,31 +11,35 @@ case class GameRules(
   initDevCardAmounts: PlayedInventory,
   numSettlements: Int,
   numCities: Int,
-  numRoads: Int
+  numRoads: Int,
+  discardLimit: Int
 )
 
 object GameRules {
-  val NUM_EACH_RESOURCE = 19
-  val NUM_KNIGHT = 14
-  val NUM_MONOPOLY = 2
-  val NUM_YOP = 2
-  val NUM_ROAD_BUILDER = 2
-  val NUM_VP = 5
+  val RESOURCE_COUNT = 19
+  val KNIGHT_COUNT = 14
+  val MONOPOLY_COUNT = 2
+  val YOP_COUNT = 2
+  val ROAD_BUILDER_COUNT = 2
+  val VP_COUNT = 5
 
   val POINTS_TO_WIN = 10
-  val INITIAL_BANK = CatanResourceSet(NUM_EACH_RESOURCE, NUM_EACH_RESOURCE, NUM_EACH_RESOURCE, NUM_EACH_RESOURCE, NUM_EACH_RESOURCE)
-  val INITIAL_DEV_AMOUNTS = DevelopmentCardSet(NUM_KNIGHT, NUM_VP, NUM_ROAD_BUILDER, NUM_MONOPOLY, NUM_YOP)
-  val NUM_SETTLEMENTS = 5
-  val NUM_CITIES = 4
-  val NUM_ROADS = 15
+  val INITIAL_BANK = CatanResourceSet(RESOURCE_COUNT, RESOURCE_COUNT, RESOURCE_COUNT, RESOURCE_COUNT, RESOURCE_COUNT)
+  val INITIAL_DEV_AMOUNTS = DevelopmentCardSet(KNIGHT_COUNT, VP_COUNT, ROAD_BUILDER_COUNT, MONOPOLY_COUNT, YOP_COUNT)
+  val SETTLEMENTS_COUNT = 5
+  val CITIES_COUNT = 4
+  val ROADS_COUNT = 15
+
+  val DISCARD_RESOURCE_LIMIT = 7
 
   def default = GameRules(
     GameRules.POINTS_TO_WIN,
     GameRules.INITIAL_BANK,
     GameRules.INITIAL_DEV_AMOUNTS,
-    GameRules.NUM_SETTLEMENTS,
-    GameRules.NUM_CITIES,
-    GameRules.NUM_ROADS)
+    GameRules.SETTLEMENTS_COUNT,
+    GameRules.CITIES_COUNT,
+    GameRules.ROADS_COUNT,
+    GameRules.DISCARD_RESOURCE_LIMIT)
 
 
 }
