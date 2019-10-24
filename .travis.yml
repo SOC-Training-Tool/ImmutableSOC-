@@ -6,7 +6,7 @@ jobs:
   - stage: test
     script: sbt ++$TRAVIS_SCALA_VERSION test
   - stage: deploy
-    if: branch = master AND type = push
+    if: tag =~ ^v
     script: sbt ++$TRAVIS_SCALA_VERSION releaseEarly;
 cache:
   directories:
