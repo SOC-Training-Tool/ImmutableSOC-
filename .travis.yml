@@ -18,7 +18,7 @@ before_install:
   -iv $encrypted_5eaf5e1c6bb6_iv -in travis/secrets.tar.enc -out travis/secrets.tar
   -d; tar xv -C travis -f travis/secrets.tar; fi
 after_success:
-- if [ $TRAVIS_PULL_REQUEST = 'false' ]; then sbt ++$TRAVIS_SCALA_VERSION releaseEarly;
+- if [ branch = master AND type = push ]; then sbt ++$TRAVIS_SCALA_VERSION releaseEarly;
   fi
 env:
   global:
