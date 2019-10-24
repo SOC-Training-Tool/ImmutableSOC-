@@ -5,6 +5,9 @@ jobs:
   include:
   - stage: test
     script: sbt ++$TRAVIS_SCALA_VERSION test
+  - stage: deploy
+    if: branch = master AND type = push
+    script: sbt ++$TRAVIS_SCALA_VERSION releaseEarly;
 cache:
   directories:
   - "$HOME/.ivy2/cache"
@@ -17,9 +20,6 @@ before_install:
 - if [ $TRAVIS_PULL_REQUEST = 'false' ]; then openssl aes-256-cbc -K $encrypted_5eaf5e1c6bb6_key
   -iv $encrypted_5eaf5e1c6bb6_iv -in travis/secrets.tar.enc -out travis/secrets.tar
   -d; tar xv -C travis -f travis/secrets.tar; fi
-after_success:
-- if [ branch = master AND type = push ]; then sbt ++$TRAVIS_SCALA_VERSION releaseEarly;
-  fi
 env:
   global:
   - secure: EjuKO/RPLSdzXRu4hZApX62c+MTXJUav1oS2GsGCugi8bu26tNJ2UFot1ydr2Rj/HwxcNVpdYx8YYE9Pnu/ng2l2AQy7Zbhzj4IoUUchQWdyUdshOvv1MiNMkSSaOd9cXSe+dG+OMHzN8GHtlhRLHgVTivbP+DofzJwT60noS07YHQ5vGfdnnGKzFIxkK9NyBgl0PwUqWWVbglRnpHAODZY6DDK/H9eNsbOchonLcDHArxbVFHAx6eTnUXZo/exKHH5x8A/DgJ0hFVqLVprXwuaK3V5ZDqWSJpwzkyQ+Vzi+1A9cSBYsqWSiKJ3oBw7V0leEzGiMyUURYbPhJEziWqo9kZF30dnHAy33JHt8CRke/B5j8fd30hr1xkjTAUAiQgWa2gz+RK7gFvQqPIh1YRlXFxvbz3WOXq1ioq0DlExVexZ2JgS2baHKSteS2VKypmP08EA19hzN/QOsezdeHTSt04UqDTtHJK6kh9bSCPtCPMy9MJt9MuPXU22ufzqbb9S2l9Zoxup3JqoasDLsb6mrupNO0xl5D9ByDLOK9XQM3Renvv1zf8Rn/xcUDguXtwGxMjJvWiTDK7xqMN1JX5GM4Hc6SNH4GqrJJR52/FPUcl2lDBFPKkRnHIy3oRZ9LeSBd10Ggy2xe+YeeMM1dAxI3eu+7uvx06Enl/hazF8=
