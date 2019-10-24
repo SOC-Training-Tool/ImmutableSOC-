@@ -1,6 +1,5 @@
 package soc.state.player
 
-import protos.soc.inventory.DevelopmentCardSpecification
 import soc.board._
 import soc.core.GameRules
 import soc.inventory._
@@ -90,6 +89,8 @@ case class PlayerState[T <: Inventory[T]](
   def canBuyDevelopmentCard = true
 
   def endTurn: PlayerState[T] = copy(inventory = inventory.endTurn)
+
+  lazy val toPublicInfo = copy(inventory = inventory.toPublicInfo)
 
 }
 

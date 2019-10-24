@@ -1,6 +1,5 @@
 package soc.inventory.developmentCard
 
-import protos.soc.inventory.DevelopmentCardSpecification
 import soc.inventory._
 
 import scala.util.Random
@@ -56,25 +55,28 @@ class DevelopmentCardManager(kn: Int, po: Int, mp: Int, rb: Int, yp: Int)(implic
   }
 }
 
+case class DevelopmentCardSpecification(
+  `type`: DevelopmentCard,
+  turnPurchased: Option[Int] = None,
+  turnPlayed: Option[Int] = None
+)
 
-case class DevelopmentCardSpecificationSet(protected[inventory] val cards: List[DevelopmentCardSpecification] = Nil) {
-  import soc.inventory.ProtoImplicits._
-  import soc.proto.ProtoCoder.ops._
+case class DevelopmentCardSpecificationSet(cards: List[DevelopmentCardSpecification] = Nil) {
 
   lazy val length = cards.length
   lazy val isEmpty = cards.length == 0
 
-  def buyCard(turn: Int, card: DevelopmentCard): DevelopmentCardSpecificationSet = copy(DevelopmentCardSpecification(card.proto, Some(turn), None) :: cards)
+  def buyCard(turn: Int, card: DevelopmentCard): DevelopmentCardSpecificationSet = copy(DevelopmentCardSpecification(card, Some(turn), None) :: cards)
   def playCard(turn: Int, card: DevelopmentCard): DevelopmentCardSpecificationSet = {
-    def f(c: DevelopmentCardSpecification) = c.turnPlayed.isEmpty && c.`type` == card.proto
+    def f(c: DevelopmentCardSpecification) = c.turnPlayed.isEmpty && c.`type` == card
     val s = cards.filter(f).sortBy(_.turnPurchased)
-    copy(s.headOption.fold(List(DevelopmentCardSpecification(card.proto, None, Some(turn))))(_.copy(turnPlayed = Some(turn)) :: s.tail) ::: cards.filterNot(f))
+    copy(s.headOption.fold(List(DevelopmentCardSpecification(card, None, Some(turn))))(_.copy(turnPlayed = Some(turn)) :: s.tail) ::: cards.filterNot(f))
   }
   def playedCardOnTurn(turn: Int) = cards.find(_.turnPlayed.fold(false)(_ == turn)).isDefined
 
   lazy val filterUnPlayed = copy(cards.filter(_.turnPlayed.isEmpty))
   lazy val filterPlayed = copy(cards.filter(_.turnPlayed.isDefined))
-  lazy val toList: List[DevelopmentCard] = cards.map(_.`type`.proto)
+  lazy val toList: List[DevelopmentCard] = cards.map(_.`type`)
 }
 
 

@@ -1,46 +1,63 @@
 package soc.state
 
-import soc.proto.ProtoCoder.ops._
 import soc.board._
-import BaseCatanBoard.baseBoardMapping
-import protos.soc.state.{Player, PublicGameState, TurnPhase}
-import soc.board.ProtoImplicits._
-import soc.inventory.ProtoImplicits._
 import soc.core._
+import soc.inventory.Inventory.PublicInfo
 import soc.inventory._
-import soc.inventory.resources.CatanResourceSet.Resources
+import soc.inventory.resources.CatanResourceSet._
 import soc.inventory.resources._
 import soc.moves._
 import soc.state.player._
-import soc.state.ProtoImplicits._
 
 case class GameState[T <: Inventory[T]](
-  publicGameState: PublicGameState,
-  players: PlayerStateHelper[T]) {
+  board: CatanBoard,
+  players: PlayerStateHelper[T],
+  resourceBank: CatanResourceSet[Int],
+  developmentCardsLeft: Int,
+  currentPlayer: Int,
+  phase: GamePhase,
+  turn: Int,
+  rules: GameRules,
+  expectingDiscard: List[Int]) {
 
-  private def update(gameStateUpdate: PublicGameState => PublicGameState, playerUpdate: PlayerStateHelper[T] => PlayerStateHelper[T]): GameState[T] = {
-    val newPlayers = playerUpdate(players)
-    val newState = gameStateUpdate(publicGameState).copy(
-      playerStates = newPlayers.proto
-    )
-    copy(newState, newPlayers)
+  lazy val toPublicGameState = GameState[PublicInfo](
+    board,
+    players.toPublicInfoHelper,
+    resourceBank,
+    developmentCardsLeft,
+    currentPlayer,
+    phase,
+    turn,
+    rules,
+    expectingDiscard
+  )
+
+  private def transition (
+    board: CatanBoard = board,
+    players: PlayerStateHelper[T] = players,
+    resourceBank: CatanResourceSet[Int] = resourceBank,
+    developmentCardsLeft: Int = developmentCardsLeft,
+    currentPlayer: Int = currentPlayer,
+    phase: GamePhase = phase,
+    turn: Int = turn,
+    rules: GameRules = rules,
+    expectingDiscard: List[Int] = expectingDiscard,
+    transactions: List[SOCTransactions] = Nil
+  ): StateTransition[T] = {
+    val state = copy(board, players.updateResources(transactions), resourceBank, developmentCardsLeft, currentPlayer, phase, turn, rules, expectingDiscard)
+    StateTransition(state, transactions)
   }
 
-  val currentPlayer = publicGameState.currentTurnPlayer.position
-  val board: CatanBoard = publicGameState.board.proto
-  val bank = publicGameState.resourceBank.proto
-  val developmentCardsInDeck = publicGameState.developmentCardsLeft
-  val canRollDice = publicGameState.phase == TurnPhase.ROLL
-  val canPlayCard = players.getPlayer(currentPlayer).playedDevCards.playedCardOnTurn(publicGameState.turn)
-  val turnNumber = publicGameState.turn
+  val canRollDice = phase == GamePhase.Roll
+  val canPlayCard = !players.getPlayer(currentPlayer).playedDevCards.playedCardOnTurn(turn)
 
   val firstPlayerId: Int = players.firstPlayerId
   val lastPlayerId: Int = players.lastPlayerId
 
-  def initialPlacement(result: InitialPlacementMove): GameState[T] = initialPlacement(result.first, result.settlement, result.road)
-  def initialPlacement(first: Boolean, vertex: Vertex, edge: Edge): GameState[T] = {
+  def initialPlacement(result: InitialPlacementMove): StateTransition[T] = initialPlacement(result.first, result.settlement, result.road)
+  def initialPlacement(first: Boolean, vertex: Vertex, edge: Edge): StateTransition[T] = {
 
-    val newState = buildSettlement(vertex, buy = false).buildRoad(edge, buy = false)
+    val newState = buildSettlement(vertex, buy = false).state.buildRoad(edge, buy = false).state
     val resourcesFromSettlement = if (!first) {
       val resList = newState.board.adjacentHexes(vertex).flatMap { node =>
         node.hex.getResourceAndNumber.map {
@@ -58,24 +75,30 @@ case class GameState[T <: Inventory[T]](
       case (false, _) => players.previousPlayer(currentPlayer)
     }
 
-    newState.update (
-      _.copy(resourceBank = bank.subtract(resourcesFromSettlement).proto, turn = nextTurn),
-      _.updateResources(newTransactions)
+    newState.transition(
+      resourceBank = resourceBank.subtract(resourcesFromSettlement),
+      currentPlayer = nextTurn,
+      transactions = newTransactions,
+      phase = if (!first && currentPlayer == firstPlayerId) GamePhase.Roll else GamePhase.InitialPlacement
     )
   }
 
-  def rollDice(rollResult: RollResult): GameState[T] = rollDice(rollResult.roll)
-  def rollDice(diceRoll: Roll): GameState[T] = {
+  def rollDice(rollResult: RollResult): StateTransition[T] = rollDice(rollResult.roll)
+  def rollDice(diceRoll: Roll): StateTransition[T] = {
 
-    if (diceRoll.number == 7) return copy(publicGameState.copy(
-      phase = TurnPhase.BUY_TRADE_OR_END
-    ))
+    if (diceRoll.number == 7) {
+      val newExpectingDiscard = players.players.filter { case (_, state) => state.numCards > rules.discardLimit}.keys.toList
+      return transition(
+        phase = if (newExpectingDiscard.isEmpty) GamePhase.MoveRobber else GamePhase.Discard,
+        expectingDiscard = newExpectingDiscard
+      )
+    }
 
     val resForPlayers: Map[Int, Resources] = board.getResourcesGainedOnRoll(diceRoll.number)
     val totalResourcesCollected: Resources = resForPlayers.values.foldLeft(CatanResourceSet.empty[Int])(_.add(_))
-    val actualResForPlayers = if (!bank.contains(totalResourcesCollected)) {
+    val actualResForPlayers = if (!resourceBank.contains(totalResourcesCollected)) {
       val overflowTypes = {
-        val total = bank.subtract(totalResourcesCollected)
+        val total = resourceBank.subtract(totalResourcesCollected)
         Resource.list.filter(res => total.contains(res))
       }
       resForPlayers.map[Int, Resources] { case (player, resourceSet) =>
@@ -90,110 +113,122 @@ case class GameState[T <: Inventory[T]](
       Gain(player.position, actualResForPlayers.getOrElse(player.position, CatanResourceSet()))
     }.filterNot(_.resourceSet.isEmpty).toList
 
-    update (
-      _.copy(resourceBank = bank.subtract(trueTotalCollected).proto, phase = TurnPhase.BUY_TRADE_OR_END),
-      _.updateResources(newTransactions)
+    transition(
+      resourceBank = resourceBank.subtract(trueTotalCollected),
+      phase = GamePhase.BuyTradeOrEnd,
+      transactions = newTransactions
     )
   }
 
-  def playersDiscardFromSeven(discard: DiscardResourcesMove): GameState[T] = playersDiscardFromSeven(discard.resourceSet)
-  def playersDiscardFromSeven(cardsLostMap: Map[Int, Resources]): GameState[T] = {
-    val newTransactions = cardsLostMap.toList.map { case (player, discard) => Lose(player, discard) }
-    val totalLost: Resources = cardsLostMap.values.foldLeft(CatanResourceSet.empty[Int])(_.add(_))
-    update (
-      _.copy(resourceBank = bank.add(totalLost).proto),
-      _.updateResources(newTransactions)
+  def playersDiscardFromSeven(discard: DiscardResourcesResult): StateTransition[T] = playersDiscardFromSeven(discard.resourceLost)
+  def playersDiscardFromSeven(cardsLost: Map[Int, Resources]): StateTransition[T] = {
+    val newTransactions: List[SOCTransactions] = cardsLost.toSeq.map { case (pos, res) => Lose(pos, res)}.toList
+    val totalLost: Resources = CatanResourceSet.sum(cardsLost.values.toSeq)
+    val newExpectingDiscard = expectingDiscard.filterNot(cardsLost.keys.toList.contains)
+    transition (
+      resourceBank = resourceBank.add(totalLost),
+      transactions = newTransactions,
+      phase = if (newExpectingDiscard.isEmpty) GamePhase.MoveRobber else GamePhase.Discard,
+      expectingDiscard = newExpectingDiscard
     )
   }
 
-  def moveRobberAndSteal(result: MoveRobberAndStealResult): GameState[T] = moveRobberAndSteal(result.robberLocation, result.steal)
-  def moveRobberAndSteal(robberLocation: Int, steal: Option[Steal]): GameState[T] = {
-    val newTransactions = steal.fold(List.empty[SOCTransactions])(s => List(s))
-    update (
-      _.copy(board = board.copy(robberHex = robberLocation).proto),
-      _.updateResources(newTransactions)
+  def moveRobberAndSteal(result: MoveRobberAndStealResult): StateTransition[T] = moveRobberAndSteal(result.robberLocation, result.steal)
+  def moveRobberAndSteal(robberLocation: Int, steal: Option[RobPlayer]): StateTransition[T] = {
+    val newTransactions = steal.fold(List.empty[SOCTransactions])(s => List(Steal(currentPlayer, s.player, s.res.map(CatanResourceSet.fromList(_)))))
+    transition (
+      board = board.copy(robberHex = robberLocation),
+      transactions = newTransactions,
+      phase = GamePhase.BuyTradeOrEnd
     )
   }
 
-  def buildSettlement(result: BuildSettlementMove): GameState[T] = buildSettlement(result.vertex)
-  def buildSettlement(vertex: Vertex, buy: Boolean = true): GameState[T] = {
+  def buildSettlement(result: BuildSettlementMove): StateTransition[T] = buildSettlement(result.vertex)
+  def buildSettlement(vertex: Vertex, buy: Boolean = true): StateTransition[T] = {
     val newBoard = board.buildSettlement(vertex, currentPlayer)
     val newTransactions = if (buy) List(Lose(currentPlayer, Settlement.cost)) else Nil
-    update(
-      _.copy(board = newBoard.proto, resourceBank = (if (buy) bank.add(Settlement.cost) else bank).proto),
-      _.buildSettlement(currentPlayer, vertex, newBoard).updateResources(newTransactions),
+    transition (
+      board = newBoard,
+      resourceBank = (if (buy) resourceBank.add(Settlement.cost) else resourceBank),
+      players = players.buildSettlement(currentPlayer, vertex, newBoard),
+      transactions = newTransactions
     )
   }
 
-  def buildCity(result: BuildCityMove): GameState[T] = buildCity(result.vertex)
-  def buildCity(vertex: Vertex): GameState[T] = {
+  def buildCity(result: BuildCityMove): StateTransition[T] = buildCity(result.vertex)
+  def buildCity(vertex: Vertex): StateTransition[T] = {
     val newBoard = board.buildCity(vertex, currentPlayer)
     val newTransactions = List(Lose(currentPlayer, City.cost))
-    update(
-      _.copy(board = newBoard.proto, resourceBank = bank.add(City.cost).proto),
-      _.buildCity(currentPlayer, vertex, newBoard).updateResources(newTransactions)
+    transition (
+      board = newBoard,
+      resourceBank = resourceBank.add(City.cost),
+      players = players.buildCity(currentPlayer, vertex, newBoard),
+      transactions = newTransactions
     )
   }
 
-  def buildRoad(result: BuildRoadMove): GameState[T] = buildRoad(result.edge)
-  def buildRoad(edge: Edge, buy: Boolean = true): GameState[T] = {
+  def buildRoad(result: BuildRoadMove): StateTransition[T] = buildRoad(result.edge)
+  def buildRoad(edge: Edge, buy: Boolean = true): StateTransition[T] = {
     val newBoard = board.buildRoad(edge, currentPlayer)
     val newTransactions = if (buy) List(Lose(currentPlayer, Road.cost)) else Nil
-    update(
-      _.copy(board = newBoard.proto, resourceBank = (if (buy) bank.add(Road.cost) else bank).proto),
-      _.buildRoad(currentPlayer, edge, newBoard).updateResources(newTransactions)
+    transition (
+      board = newBoard,
+      resourceBank = (if (buy) resourceBank.add(Road.cost) else resourceBank),
+      players = players.buildRoad(currentPlayer, edge, newBoard),
+      transactions = newTransactions
     )
   }
 
-  def buyDevelopmentCard(result: BuyDevelopmentCardResult): GameState[T] = buyDevelopmentCard(result.card)
-  def buyDevelopmentCard(card: Option[DevelopmentCard]): GameState[T] = {
+  def buyDevelopmentCard(result: BuyDevelopmentCardResult): StateTransition[T] = buyDevelopmentCard(result.card)
+  def buyDevelopmentCard(card: Option[DevelopmentCard]): StateTransition[T] = {
     val newTransactions = List(Lose(currentPlayer, DevelopmentCard.cost))
-    update(
-      _.copy(resourceBank =  bank.add(DevelopmentCard.cost).proto, developmentCardsLeft = publicGameState.developmentCardsLeft - 1),
-      _.buyDevelopmentCard(publicGameState.turn, currentPlayer, card).updateResources(newTransactions)
+    transition(
+      resourceBank =  resourceBank.add(DevelopmentCard.cost),
+      developmentCardsLeft = developmentCardsLeft - 1,
+      players = players.buyDevelopmentCard(turn, currentPlayer, card),
+      transactions = newTransactions
     )
   }
 
-  def playKnight(result: KnightResult): GameState[T] = playKnight(result.robber.robberLocation, result.robber.steal)
-  def playKnight(robberLocation: Int, steal: Option[Steal]): GameState[T] = {
-    update(
-      _.copy(),
-      _.playKnight(currentPlayer, turnNumber)
-    ).moveRobberAndSteal(robberLocation, steal)
+  def playKnight(result: KnightResult): StateTransition[T] = playKnight(result.robber.robberLocation, result.robber.steal)
+  def playKnight(robberLocation: Int, steal: Option[RobPlayer]): StateTransition[T] = {
+    transition(
+      players = players.playKnight(currentPlayer, turn)
+    ).state.moveRobberAndSteal(robberLocation, steal)
   }
 
-  def playMonopoly(result: MonopolyResult): GameState[T] = playMonopoly(result.cardsLost)
-  def playMonopoly(cardsLost: Map[Int, Resources]): GameState[T] = {
+  def playMonopoly(result: MonopolyResult): StateTransition[T] = playMonopoly(result.cardsLost)
+  def playMonopoly(cardsLost: Map[Int, Resources]): StateTransition[T] = {
     val newTransactions = Gain(currentPlayer, cardsLost.values.fold(CatanResourceSet.empty[Int])(_.add(_))) ::
       cardsLost.map { case (player, cards) => Lose(player, cards) }.toList
-    update(
-      _.copy(),
-      _.playMonopoly(currentPlayer, turnNumber).updateResources(newTransactions)
+    transition (
+      players = players.playMonopoly(currentPlayer, turn),
+      transactions = newTransactions
     )
   }
 
-  def playYearOfPlenty(result: YearOfPlentyMove): GameState[T] = playYearOfPlenty(result.res1, result.res2)
-  def playYearOfPlenty(card1: Resource, card2: Resource): GameState[T] = {
+  def playYearOfPlenty(result: YearOfPlentyMove): StateTransition[T] = playYearOfPlenty(result.res1, result.res2)
+  def playYearOfPlenty(card1: Resource, card2: Resource): StateTransition[T] = {
     val set = CatanResourceSet.fromList(card1, card2)
     val newTransactions = List(Gain(currentPlayer, set))
-    update(
-      _.copy(resourceBank = bank.subtract(set).proto),
-      _.playYearOfPlenty(currentPlayer, turnNumber).updateResources(newTransactions)
+    transition(
+      resourceBank = resourceBank.subtract(set),
+      players = players.playYearOfPlenty(currentPlayer, turn),
+      transactions = newTransactions
     )
   }
 
-  def playRoadBuilder(result: RoadBuilderMove): GameState[T] = playRoadBuilder(result.road1, result.road2)
-  def playRoadBuilder(road1: Edge, road2: Option[Edge]): GameState[T] = {
-    val firstRoadBoard = buildRoad(road1, buy = false)
-    val newBoard = road2.fold(firstRoadBoard)(r => firstRoadBoard.buildRoad(r, buy = false))
-    newBoard.update(
-      _.copy(),
-      _.playRoadBuilder(currentPlayer, turnNumber)
+  def playRoadBuilder(result: RoadBuilderMove): StateTransition[T] = playRoadBuilder(result.road1, result.road2)
+  def playRoadBuilder(road1: Edge, road2: Option[Edge]): StateTransition[T] = {
+    val firstRoadBoard = buildRoad(road1, buy = false).state
+    val newBoard = road2.fold(firstRoadBoard)(r => firstRoadBoard.buildRoad(r, buy = false).state)
+    newBoard.transition(
+      players = players.playRoadBuilder(currentPlayer, turn)
     )
   }
 
-  def trade(result: PlayerTradeMove): GameState[T] = trade(result.to, result.give, result.get)
-  def trade(to: Int, give: Resources, get: Resources): GameState[T] = {
+  def trade(result: PlayerTradeMove): StateTransition[T] = trade(result.to, result.give, result.get)
+  def trade(to: Int, give: Resources, get: Resources): StateTransition[T] = {
 
     val newTransactions = List(
       Lose(currentPlayer, give),
@@ -202,37 +237,34 @@ case class GameState[T <: Inventory[T]](
       Gain(to, give)
     )
 
-    update(
-      _ => publicGameState,
-      _.updateResources(newTransactions)
+    transition(
+      transactions = newTransactions
     )
   }
 
-  def portTrade(result: PortTradeMove): GameState[T] = portTrade(result.give, result.get)
-  def portTrade(give: Resources, get: Resources): GameState[T] = {
+  def portTrade(result: PortTradeMove): StateTransition[T] = portTrade(result.give, result.get)
+  def portTrade(give: Resources, get: Resources): StateTransition[T] = {
     val newTransactions = List(
       Lose(currentPlayer, give),
       Gain(currentPlayer, get)
     )
-    update(
-      _.copy(resourceBank =  bank.subtract(get).add(give).proto),
-      _.updateResources(newTransactions)
+    transition(
+      resourceBank =  resourceBank.subtract(get).add(give),
+      transactions = newTransactions
     )
   }
 
-  def endTurn: GameState[T] = {
-    val nextPlayerPosition = players.nextPlayer(currentPlayer)
-    val nextPlayer = Player(
-      players.getPlayer(nextPlayerPosition).name,
-      players.getPlayer(nextPlayerPosition).position
-    )
-    update(
-      _.copy(phase = TurnPhase.ROLL, currentTurnPlayer = nextPlayer ),
-      _.endTurn(currentPlayer)
+  def endTurn: StateTransition[T] = {
+    val nextPlayer = players.nextPlayer(currentPlayer)
+    transition(
+      phase = GamePhase.Roll,
+      currentPlayer = nextPlayer,
+      turn = turn + 1,
+      players = players.endTurn(currentPlayer)
     )
   }
 
-  def apply(moveResult: MoveResult): GameState[T] = moveResult match {
+  def apply(moveResult: MoveResult): StateTransition[T] = moveResult match {
     case r: RollResult => rollDice(r)
     case EndTurnMove => endTurn
     case r: InitialPlacementMove => initialPlacement(r)
@@ -246,44 +278,33 @@ case class GameState[T <: Inventory[T]](
     case r: YearOfPlentyMove => playYearOfPlenty(r)
     case r: MonopolyResult => playMonopoly(r)
     case r: RoadBuilderMove => playRoadBuilder(r)
-    case _ => this
+    case r: DiscardResourcesResult => playersDiscardFromSeven(r)
+    case _ => transition()
   }
 }
 
 object GameState {
 
-  def apply[T <: Inventory[T]](
-    board: CatanBoard,
-    playerNameIds: Seq[(String, Int)],
-    rules: GameRules
-  )(implicit factory: InventoryHelperFactory[T]): GameState[T] = {
-
+  def apply[T <: Inventory[T]](board: CatanBoard, playerNameIds: Seq[(String, Int)], rules: GameRules)(implicit factory: InventoryHelperFactory[T]): GameState[T] = {
     implicit val gameRules = rules
-    implicit val helper = factory.createInventoryHelper
-    val psHelper = PlayerStateHelper(playerNameIds.map { case (name, position) =>
-      position -> PlayerState(name, position, helper.createInventory)
-    }.toMap)
+    val psHelper: PlayerStateHelper[T] = PlayerStateHelper[T](playerNameIds)
     GameState(board, psHelper, rules)
   }
 
-  def apply[T <: Inventory[T]](
-    board: CatanBoard,
-    players: PlayerStateHelper[T],
-    rules: GameRules
-  ): GameState[T] = {
-    val firstPlayer = Player(
-      players.getPlayer(players.firstPlayerId).name,
-      players.getPlayer(players.firstPlayerId).position
-    )
+  def apply[T <: Inventory[T]](board: CatanBoard, players: PlayerStateHelper[T], rules: GameRules): GameState[T] = {
+    implicit val gameRules = rules
     GameState[T](
-      PublicGameState(
-        board.proto,
-        players.proto,
-        rules.initBank.proto,
-        rules.initDevCardAmounts.getTotal,
-        firstPlayer,
-        TurnPhase.ROLL,
-        0),
-      players)
+      board,
+      players,
+      rules.initBank,
+      rules.initDevCardAmounts.getTotal,
+      players.firstPlayerId,
+      GamePhase.InitialPlacement,
+      0,
+      rules,
+      Nil)
+
   }
 }
+
+case class StateTransition[T <: Inventory[T]](state: GameState[T], transactions: List[SOCTransactions])

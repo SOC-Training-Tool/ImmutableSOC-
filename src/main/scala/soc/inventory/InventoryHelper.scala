@@ -83,14 +83,14 @@ case class ProbableInfoInventoryHelper(
   override def createInventory: ProbableInfo = new ProbableInfoInventory()
 }
 
-case class NoInfoInventoryHelper()(implicit val gameRules: GameRules) extends InventoryHelper[NoInfo] {
+case class PublicInfoInventoryHelper()(implicit val gameRules: GameRules) extends InventoryHelper[PublicInfo] {
 
-  override def updateResources(players: Map[Int, PlayerState[NoInfo]], transactions: List[SOCTransactions]): (Map[Int, PlayerState[NoInfo]], InventoryHelper[NoInfo]) = {
+  override def updateResources(players: Map[Int, PlayerState[PublicInfo]], transactions: List[SOCTransactions]): (Map[Int, PlayerState[PublicInfo]], InventoryHelper[PublicInfo]) = {
     (players.view.mapValues(_.updateResources(transactions)).toMap, this)
   }
 
 
-  override def playDevelopmentCard(players: Map[Int, PlayerState[NoInfo]], id: Int, turn: Int, card: DevelopmentCard):(Map[Int, PlayerState[NoInfo]], InventoryHelper[NoInfo]) = {
+  override def playDevelopmentCard(players: Map[Int, PlayerState[PublicInfo]], id: Int, turn: Int, card: DevelopmentCard):(Map[Int, PlayerState[PublicInfo]], InventoryHelper[PublicInfo]) = {
     (players.map {
       case(`id`, ps) => id -> ps.updateDevelopmentCard(turn, PlayDevelopmentCard(id, card))
       case (i, ps) => i -> ps
@@ -99,7 +99,7 @@ case class NoInfoInventoryHelper()(implicit val gameRules: GameRules) extends In
 
 
 
-  override def buyDevelopmentCard(players: Map[Int, PlayerState[NoInfo]], id: Int, turn: Int, card: Option[DevelopmentCard]): (Map[Int, PlayerState[NoInfo]], InventoryHelper[NoInfo]) = {
+  override def buyDevelopmentCard(players: Map[Int, PlayerState[PublicInfo]], id: Int, turn: Int, card: Option[DevelopmentCard]): (Map[Int, PlayerState[PublicInfo]], InventoryHelper[PublicInfo]) = {
     (players.map {
       case (`id`, ps) => id -> ps.updateDevelopmentCard(turn, BuyDevelopmentCard(id, card))
       case (i, ps) => i -> ps
@@ -107,7 +107,7 @@ case class NoInfoInventoryHelper()(implicit val gameRules: GameRules) extends In
   }
 
 
-  override def createInventory: NoInfo = new NoInfoInventory
+  override def createInventory: PublicInfo = new PublicInfoInventory
 }
 
 trait InventoryHelperFactory[T <: Inventory[T]] {
@@ -124,8 +124,8 @@ object InventoryHelper {
     override def createInventoryHelper(implicit gameRules: GameRules): InventoryHelper[ProbableInfo] = ProbableInfoInventoryHelper(SOCPossibleHands.empty, PossibleDevelopmentCards.empty)
   }
 
-  implicit val noInfoInventoryManagerFactory = new InventoryHelperFactory[NoInfo] {
-    override def createInventoryHelper(implicit gameRules: GameRules): InventoryHelper[NoInfo] = NoInfoInventoryHelper()
+  implicit val publicInfoInventoryManagerFactory = new InventoryHelperFactory[PublicInfo] {
+    override def createInventoryHelper(implicit gameRules: GameRules): InventoryHelper[PublicInfo] = PublicInfoInventoryHelper()
   }
 }
 

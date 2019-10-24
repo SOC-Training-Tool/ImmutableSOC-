@@ -1,7 +1,7 @@
 package soc.board
 
 import soc.core.Roll
-import soc.inventory.{ProtoImplicits => _, _}
+import soc.inventory.{_}
 import org.scalatest.{FunSpec, Matchers}
 import soc.CatanFixtures._
 
@@ -361,14 +361,5 @@ class CatanBoardSpec extends FunSpec with Matchers {
     }
   }
 
-  it("board proto") {
-    import ProtoImplicits._
-    import soc.proto.ProtoCoder.ops._
-    import BaseCatanBoard.baseBoardMapping
 
-    val encoded = baseBoard.proto
-    val decoded = encoded.proto
-
-    decoded shouldEqual baseBoard
-  }
 }

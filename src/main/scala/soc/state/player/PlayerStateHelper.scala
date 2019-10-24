@@ -2,6 +2,7 @@ package soc.state.player
 
 import soc.board._
 import soc.core.GameRules
+import soc.inventory.Inventory.PublicInfo
 import soc.inventory._
 import soc.inventory.resources.SOCTransactions
 
@@ -115,6 +116,11 @@ case class PlayerStateHelper [T <: Inventory[T]] protected (val players: Map[Int
         }
       }
     )
+  }
+
+  def toPublicInfoHelper: PlayerStateHelper[PublicInfo] = {
+    import soc.inventory.InventoryHelper.publicInfoInventoryManagerFactory
+    PlayerStateHelper(players.view.mapValues(_.toPublicInfo).toMap)(publicInfoInventoryManagerFactory.createInventoryHelper, gameRules)
   }
 }
 
