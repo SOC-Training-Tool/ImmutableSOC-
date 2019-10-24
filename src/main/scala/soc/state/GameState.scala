@@ -75,11 +75,11 @@ case class GameState[T <: Inventory[T]](
       case (false, _) => players.previousPlayer(currentPlayer)
     }
 
-    transition(
+    newState.transition(
       resourceBank = resourceBank.subtract(resourcesFromSettlement),
-      turn = nextTurn,
+      currentPlayer = nextTurn,
       transactions = newTransactions,
-      phase = if (!first && turn == firstPlayerId) GamePhase.Roll else GamePhase.InitialPlacement
+      phase = if (!first && currentPlayer == firstPlayerId) GamePhase.Roll else GamePhase.InitialPlacement
     )
   }
 
@@ -124,7 +124,7 @@ case class GameState[T <: Inventory[T]](
   def playersDiscardFromSeven(cardsLost: Map[Int, Resources]): StateTransition[T] = {
     val newTransactions: List[SOCTransactions] = cardsLost.toSeq.map { case (pos, res) => Lose(pos, res)}.toList
     val totalLost: Resources = CatanResourceSet.sum(cardsLost.values.toSeq)
-    val newExpectingDiscard = cardsLost.keys.toList
+    val newExpectingDiscard = expectingDiscard.filterNot(cardsLost.keys.toList.contains)
     transition (
       resourceBank = resourceBank.add(totalLost),
       transactions = newTransactions,
@@ -259,6 +259,7 @@ case class GameState[T <: Inventory[T]](
     transition(
       phase = GamePhase.Roll,
       currentPlayer = nextPlayer,
+      turn = turn + 1,
       players = players.endTurn(currentPlayer)
     )
   }
