@@ -14,6 +14,7 @@ trait Inventory[T <: Inventory[T]] { self: T =>
   val playedDevCards: DevelopmentCardSpecificationSet
   val numUnplayedDevCards: Int
   val numCards: Int
+  val pointCountIfKnown: Option[Int]
   def canBuild(resSet: Resources): Boolean
   def endTurn: T
   def updateResources(position: Int, update: UpdateRes): T
@@ -71,6 +72,7 @@ case class PerfectInfoInventory(
   override def toPublicInfo: PublicInfo = PublicInfoInventory(playedDevCards, numCards, numUnplayedDevCards)
 
   override val playedDevCards: DevelopmentCardSpecificationSet = developmentCards.filterPlayed
+  override val pointCountIfKnown: Option[Int] = Some(developmentCards.getAmount(CatanPoint))
 }
 
 case class PublicInfoInventory(
@@ -111,6 +113,8 @@ case class PublicInfoInventory(
   override def canBuild(resSet: Resources): Boolean = true
 
   override def toPublicInfo: PublicInfo = this
+
+  override val pointCountIfKnown: Option[Int] = None
 }
 
 case class ProbableInfoInventory(
@@ -142,4 +146,6 @@ case class ProbableInfoInventory(
   }
 
   override def toPublicInfo: PublicInfo = PublicInfoInventory(playedDevCards, numCards, numUnplayedDevCards)
+
+  override val pointCountIfKnown: Option[Int] = Some(knownUnplayedDevCards.getAmount(CatanPoint))
 }

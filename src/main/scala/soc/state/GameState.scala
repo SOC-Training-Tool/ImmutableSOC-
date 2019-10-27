@@ -48,6 +48,8 @@ case class GameState[T <: Inventory[T]](
     StateTransition(state, transactions)
   }
 
+  val isOver = !players.players.values.toSeq.find(_.points >= rules.pointsToWin).isEmpty
+
   val canRollDice = phase == GamePhase.Roll
   val canPlayCard = !players.getPlayer(currentPlayer).playedDevCards.playedCardOnTurn(turn)
 

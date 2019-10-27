@@ -24,7 +24,7 @@ case class PlayerState[T <: Inventory[T]](
   val settlementPoints = settlements.length
   val cityPoints = 2 * cities.length
   val boardPoints: Int = settlementPoints + cityPoints
-  val dCardPoints = inventory.playedDevCards.getAmount(CatanPoint)
+  val dCardPoints = inventory.pointCountIfKnown.getOrElse(0)
   val points = boardPoints + armyPoints + roadPoints + dCardPoints
 
   def canBuildSettlement(implicit gameRules: GameRules) = settlements.length < gameRules.numSettlements
