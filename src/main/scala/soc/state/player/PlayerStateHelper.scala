@@ -47,7 +47,7 @@ case class PlayerStateHelper [T <: Inventory[T]] protected (val players: Map[Int
       case(`id`, ps) => id -> ps.buildRoad(board, edge)
       case (i, ps) => i -> ps
     }
-  )
+  ).updateLongestRoad
 
   def playKnight(id: Int, turn: Int): PlayerStateHelper[T] = playDevelopmentCard(id, turn, Knight).updateLargestArmy
 

@@ -3,10 +3,11 @@ package soc.state
 import org.scalatest.{FunSpec, Matchers}
 import soc.CatanFixtures
 import soc.board.{Edge, Vertex}
-import soc.core.GameRules
+import soc.core.{GameRules, Roll}
 import soc.inventory.Inventory.PerfectInfo
-import soc.inventory.{Road, Settlement}
-import soc.moves.InitialPlacementMove
+import soc.inventory._
+import soc.inventory.resources.CatanResourceSet
+import soc.moves._
 
 class GameStateSpec extends FunSpec with Matchers {
 
@@ -29,6 +30,17 @@ class GameStateSpec extends FunSpec with Matchers {
       response.currentPlayer shouldBe gameState.players.nextPlayer(gameState.currentPlayer)
 
     }
+
+  }
+
+  describe ("full game") {
+
+    it("the game should be over") {
+      val finishedState: GameState[PerfectInfo] = CatanFixtures.testMoveResults.foldLeft(gameState){ case (state, result) => state.apply(result).state }
+      assert(finishedState.isOver)
+    }
+
+
 
   }
 
