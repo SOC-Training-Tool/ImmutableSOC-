@@ -112,17 +112,17 @@ case class CatanPossibleMoves (state: GameState[PublicInfo], inventory: PerfectI
     }
   }
 
-  def getPossibleDevelopmentCard: List[CatanPlayCardMove] = {
+  def getPossibleDevelopmentCard: List[CatanPlayCardMove] = if (state.canPlayCard) {
 
-    val knight: List[KnightMove] = if (!inventory.playedDevCards.playedCardOnTurn(state.turn) && inventory.developmentCards.filterUnPlayed.contains(Knight)) {
+    val knight: List[KnightMove] = if (inventory.developmentCards.canPlayCardOnTurn(Knight, state.turn)) {
       getPossibleRobberLocations.map(KnightMove)
     } else Nil
 
-    val monopoly: List[MonopolyMove] = if (!inventory.playedDevCards.playedCardOnTurn(state.turn) && inventory.developmentCards.filterUnPlayed.contains(Monopoly)) {
+    val monopoly: List[MonopolyMove] = if (inventory.developmentCards.canPlayCardOnTurn(Monopoly, state.turn)) {
       Resource.list.map(MonopolyMove)
     } else Nil
 
-    val yearOfPlenty: List[YearOfPlentyMove] = if (!inventory.playedDevCards.playedCardOnTurn(state.turn) && inventory.developmentCards.filterUnPlayed.contains(YearOfPlenty)) {
+    val yearOfPlenty: List[YearOfPlentyMove] = if (inventory.developmentCards.canPlayCardOnTurn(YearOfPlenty, state.turn)) {
       Resource.list.flatMap { res1 =>
         Resource.list.map { res2 =>
           YearOfPlentyMove(res1, res2)
@@ -130,7 +130,7 @@ case class CatanPossibleMoves (state: GameState[PublicInfo], inventory: PerfectI
       }
     } else Nil
 
-    val roads: List[RoadBuilderMove] = if (!inventory.playedDevCards.playedCardOnTurn(state.turn) && inventory.developmentCards.filterUnPlayed.contains(RoadBuilder) && board.getNumRoadsForPlayer(playerPosition) < gameRules.numRoads) {
+    val roads: List[RoadBuilderMove] = if (inventory.developmentCards.canPlayCardOnTurn(RoadBuilder, state.turn) && board.getNumRoadsForPlayer(playerPosition) < gameRules.numRoads) {
       val firsRoadsAndBoards = board.getPossibleRoads(currPlayer).map { road1 =>
         (road1, board.buildRoad(road1, currPlayer))
       }
@@ -148,5 +148,5 @@ case class CatanPossibleMoves (state: GameState[PublicInfo], inventory: PerfectI
       if (state.phase == GamePhase.Roll) Nil
       else monopoly ::: yearOfPlenty ::: roads
     }
-  }
+  } else Nil
 }
