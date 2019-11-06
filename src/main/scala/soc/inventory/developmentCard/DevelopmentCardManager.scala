@@ -78,7 +78,7 @@ case class DevelopmentCardSpecificationSet(cards: List[DevelopmentCardSpecificat
   def canPlayCardOnTurn(card: DevelopmentCard, turn: Int): Boolean = {
     !playedCardOnTurn(turn) &&
       filterUnPlayed.contains(card) &&
-      filterUnPlayed.cards.exists{c => c.`type` == card && c.turnPurchased != turn}
+      filterUnPlayed.cards.exists{c => c.`type` == card && c.turnPurchased.fold(false)(_ != turn) }
   }
 
   lazy val filterUnPlayed = copy(cards.filter(_.turnPlayed.isEmpty))

@@ -10,6 +10,8 @@ case class RobPlayer(player: Int, res: Option[Resource])
 sealed trait CatanMove
 sealed trait MoveResult {
   val viewableBy: Seq[Int] = Nil
+
+  def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, MoveResult] = playerIds.map(id => id -> this).toMap
 }
 
 trait CatanBuildMove extends CatanMove
@@ -30,10 +32,20 @@ sealed trait ImperfectInformation
   case class DiscardResourcesResult(resourceLost: Map[Int, Resources]) extends MoveResult
 
   case class MoveRobberAndStealMove(node: Int, playerStole: Option[Int]) extends CatanMove with ImperfectInformation
-  case class MoveRobberAndStealResult(override val viewableBy: Seq[Int], robberLocation: Int, steal: Option[RobPlayer]) extends MoveResult
+  case class MoveRobberAndStealResult(override val viewableBy: Seq[Int], robberLocation: Int, steal: Option[RobPlayer]) extends MoveResult {
+    override def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, MoveResult] = playerIds.map {
+      case p if viewableBy.contains(p) => p -> this
+      case i => i -> MoveRobberAndStealResult(viewableBy, robberLocation, steal.map(r => RobPlayer(r.player, None)))
+    }.toMap
+  }
 
   case object BuyDevelopmentCardMove extends CatanBuildMove with ImperfectInformation
-  case class BuyDevelopmentCardResult(override val viewableBy: Seq[Int],  card: Option[DevelopmentCard]) extends MoveResult
+  case class BuyDevelopmentCardResult(override val viewableBy: Seq[Int],  card: Option[DevelopmentCard]) extends MoveResult {
+    override def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, MoveResult] = playerIds.map {
+      case p if viewableBy.contains(p) => p -> this
+      case i => i ->  BuyDevelopmentCardResult(viewableBy, None)
+    }.toMap
+  }
 
   case class BuildRoadMove(edge: Edge) extends CatanBuildMove with MoveResult
   case class BuildSettlementMove(vertex: Vertex) extends CatanBuildMove with MoveResult
@@ -49,7 +61,11 @@ sealed trait ImperfectInformation
 
   case class KnightMove(robber: MoveRobberAndStealMove) extends CatanPlayCardMove with ImperfectInformation
   case class KnightResult(robber: MoveRobberAndStealResult) extends MoveResult {
-    override val viewableBy= robber.viewableBy}
+    override val viewableBy= robber.viewableBy
+    override def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, MoveResult] =
+      robber.getPerspectiveResults(playerIds).view.mapValues(m => KnightResult(m.asInstanceOf[MoveRobberAndStealResult])).toMap
+  }
+
   case class YearOfPlentyMove(res1: Resource, res2: Resource) extends CatanPlayCardMove with MoveResult
   case class MonopolyMove(res: Resource) extends CatanPlayCardMove with ImperfectInformation
   case class MonopolyResult(cardsLost: Map[Int, Resources]) extends MoveResult
