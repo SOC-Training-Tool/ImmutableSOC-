@@ -287,9 +287,9 @@ case class GameState[T <: Inventory[T]](
 
 object GameState {
 
-  def apply[T <: Inventory[T]](board: CatanBoard, playerNameIds: Seq[(String, Int)], rules: GameRules)(implicit factory: InventoryHelperFactory[T]): GameState[T] = {
+  def apply[T <: Inventory[T]](board: CatanBoard, playerPos: Seq[Int], rules: GameRules)(implicit factory: InventoryHelperFactory[T]): GameState[T] = {
     implicit val gameRules = rules
-    val psHelper: PlayerStateHelper[T] = PlayerStateHelper[T](playerNameIds)
+    val psHelper: PlayerStateHelper[T] = PlayerStateHelper[T](playerPos)
     GameState(board, psHelper, rules)
   }
 

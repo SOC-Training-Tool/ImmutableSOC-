@@ -57,7 +57,7 @@ case class CatanPossibleMoves (state: GameState[PublicInfo], inventory: PerfectI
   } else Nil
 
 
-  def getPossibleBuilds: List[CatanBuildMove] = {
+  def getPossibleBuilds: List[CatanMove] = {
    getPossibleSettlements ::: getPossibleCities ::: getPossibleRoads ::: getPossibleDevelopmentCards
   }
 
@@ -112,7 +112,7 @@ case class CatanPossibleMoves (state: GameState[PublicInfo], inventory: PerfectI
     }
   }
 
-  def getPossibleDevelopmentCard: List[CatanPlayCardMove] = if (state.canPlayCard) {
+  def getPossibleDevelopmentCard: List[CatanMove] = if (state.canPlayCard) {
 
     val knight: List[KnightMove] = if (inventory.developmentCards.canPlayCardOnTurn(Knight, state.turn)) {
       getPossibleRobberLocations.map(KnightMove)

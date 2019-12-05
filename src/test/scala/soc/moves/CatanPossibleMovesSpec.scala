@@ -12,7 +12,7 @@ class CatanPossibleMovesSpec extends FunSpec with Matchers {
   val board = CatanFixtures.baseBoard
   val players = Seq(("Player0", 0), ("Player1", 1), ("Player2", 2), ("Player3", 3))
   implicit  val rules = GameRules.default
-  val gameState = GameState[PerfectInfo](board, players, rules)
+  val gameState = GameState[PerfectInfo](board, players.map(_._2), rules)
 
   val moveResults = CatanFixtures.testMoveResults
 

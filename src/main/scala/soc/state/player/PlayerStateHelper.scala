@@ -11,7 +11,6 @@ case class PlayerStateHelper [T <: Inventory[T]] protected (val players: Map[Int
   implicit val gameRules: GameRules)  {
 
   val playerIds = players.keys.toSeq.sorted
-  val playerNameIds = players.toSeq.map { case (id, context) => (context.name, id)}
 
   val firstPlayerId = playerIds.min
   val lastPlayerId = playerIds.max
@@ -126,9 +125,9 @@ case class PlayerStateHelper [T <: Inventory[T]] protected (val players: Map[Int
 
 object PlayerStateHelper {
 
-  def apply[T <: Inventory[T]](s: Seq[(String, Int)])(implicit factory: InventoryHelperFactory[T], gameRules: GameRules) = {
+  def apply[T <: Inventory[T]](s: Seq[Int])(implicit factory: InventoryHelperFactory[T], gameRules: GameRules) = {
     implicit val invHelper = factory.createInventoryHelper
-    new PlayerStateHelper[T](s.map {case(name, id) => id -> PlayerState(name, id, invHelper.createInventory) }.toMap)
+    new PlayerStateHelper[T](s.map {id => id -> PlayerState(id, invHelper.createInventory) }.toMap)
   }
 
 }
