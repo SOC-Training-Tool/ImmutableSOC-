@@ -26,7 +26,7 @@ class CatanPossibleMovesSpec extends FunSpec with Matchers {
       val publicState = state.toPublicGameState
       val privateInventory = state.players.getPlayer(playerPosition).inventory
 
-      val possibleDevCardMoves = CatanPossibleMoves(publicState, privateInventory, playerPosition).getPossibleDevelopmentCard
+      val possibleDevCardMoves = PossibleMoves.getPossibleDevelopmentCard(publicState, privateInventory)
       possibleDevCardMoves shouldBe empty
 
 

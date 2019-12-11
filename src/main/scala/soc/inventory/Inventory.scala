@@ -15,7 +15,9 @@ trait Inventory[T <: Inventory[T]] { self: T =>
   val numUnplayedDevCards: Int
   val numCards: Int
   val pointCountIfKnown: Option[Int]
-  def canBuild(resSet: Resources): Boolean
+  def canSpend(resSet: Resources): Boolean
+  def canPlayCard(card: DevelopmentCard, turn: Int): Boolean
+
   def endTurn: T
   def updateResources(position: Int, update: UpdateRes): T
   def updateDevelopmentCard(turn: Int, position: Int, update: UpdateDev): T
@@ -67,7 +69,8 @@ case class PerfectInfoInventory(
   override val numUnplayedDevCards: Int = developmentCards.filterUnPlayed.getTotal
   override val numCards: Int = resourceSet.getTotal
 
-  override def canBuild(resSet: Resources): Boolean = resourceSet.contains(resSet)
+  override def canSpend(resSet: Resources): Boolean = resourceSet.contains(resSet)
+  override def canPlayCard(card: DevelopmentCard, turn: Int): Boolean = developmentCards.canPlayCardOnTurn(card, turn)
 
   override def toPublicInfo: PublicInfo = PublicInfoInventory(playedDevCards, numCards, numUnplayedDevCards)
 
@@ -110,16 +113,18 @@ case class PublicInfoInventory(
 
   override def endTurn: PublicInfoInventory = copy()
 
-  override def canBuild(resSet: Resources): Boolean = true
+  override def canSpend(resSet: Resources): Boolean = numCards >= resSet.getTotal
+  override def canPlayCard(card: DevelopmentCard, turn: Int): Boolean = !playedDevCards.playedCardOnTurn(turn) && numUnplayedDevCards > 0
 
   override def toPublicInfo: PublicInfo = this
 
   override val pointCountIfKnown: Option[Int] = None
+
 }
 
 case class ProbableInfoInventory(
-  playedDevCards: DevelopmentCardSpecificationSet = DevelopmentCardSpecificationSet(),
   probableResourceSet: ProbableResourceSet = ProbableResourceSet.empty,
+  playedDevCards: DevelopmentCardSpecificationSet = DevelopmentCardSpecificationSet(),
   knownUnplayedDevCards: PlayedInventory=  DevelopmentCardSet.empty,
   probableDevCards: DevelopmentCardSet[Double] = DevelopmentCardSet.empty
 ) extends Inventory[ProbableInfo]  {
@@ -130,7 +135,8 @@ case class ProbableInfoInventory(
   override val numUnplayedDevCards: Int = probableDevCards.getTotal.toInt + knownUnplayedDevCards.getTotal
   override val numCards: Int = probableResourceSet.getTotal
 
-  override def canBuild(resSet: Resources): Boolean = probableResourceSet.mightContain(resSet)
+  override def canSpend(resSet: Resources): Boolean = probableResourceSet.mightContain(resSet)
+  override def canPlayCard(card: DevelopmentCard, turn: Int): Boolean = !playedDevCards.playedCardOnTurn(turn) && (knownUnplayedDevCards.contains(card) || probableDevCards.contains(card))
 
   override def updateResources(position: Int, probableSet: ProbableResourceSet): ProbableInfoInventory = copy(probableResourceSet = probableSet)
 

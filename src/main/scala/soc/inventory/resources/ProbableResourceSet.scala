@@ -3,7 +3,14 @@ package soc.inventory.resources
 import CatanResourceSet.{ResourceSet, Resources}
 import soc.inventory._
 
-class ProbableResourceSet(known: ResourceSet[Int], unknown: ResourceSet[Double]) extends CatanResourceSet(unknown.getAmount(Brick), unknown.getAmount(Ore), unknown.getAmount(Sheep), unknown.getAmount(Wheat), unknown.getAmount(Wood)) {
+class ProbableResourceSet(val known: ResourceSet[Int], val unknown: ResourceSet[Double])
+  extends CatanResourceSet[Double](
+    known.getAmount(Brick) + unknown.getAmount(Brick),
+    known.getAmount(Ore) + unknown.getAmount(Ore),
+    known.getAmount(Sheep) + unknown.getAmount(Sheep),
+    known.getAmount(Wheat) + unknown.getAmount(Wheat),
+    known.getAmount(Wood) + unknown.getAmount(Wood)
+  ) {
 
   /**
     * How many resources of this type are contained in the set?
@@ -31,7 +38,7 @@ class ProbableResourceSet(known: ResourceSet[Int], unknown: ResourceSet[Double])
     */
   override def contains(resourceType: Resource): Boolean = getKnownAmount(resourceType) > 0
 
-  def mightContain(resourceType: Resource): Boolean = getAmount(resourceType) > 0
+  def mightContain(resourceType: Resource): Boolean = unknown.getAmount(resourceType) > 0
 
   def probabilityContains(resourceType: Resource): Double = {
     if (contains(resourceType)) 1.0

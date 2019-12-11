@@ -22,8 +22,9 @@ class SOCPossibleHandsSpec extends FunSpec with Matchers {
 
     it("stealing when player contains two types of cards should result in 3 possible hand") {
       val steal = possHands.calculateHands(List(Gain(0, resourceSet), Steal(1, 0, None), Steal(1, 0, None)))
-
-      steal.handsForPlayers(1).map(_._1) should contain only (CatanResourceSet(2, 0, 0, 0, 0), CatanResourceSet(1,1,0,0,0), CatanResourceSet(0,2,0,0,0))
+      val expectedStolen = Seq(CatanResourceSet(2, 0, 0, 0, 0), CatanResourceSet(1,1,0,0,0), CatanResourceSet(0,2,0,0,0))
+      steal.handsForPlayers(0).map(_._1) should contain only expectedStolen.map(s => resourceSet.subtract(s))
+      steal.handsForPlayers(1).map(_._1) should contain only expectedStolen
     }
 
   }
@@ -37,6 +38,12 @@ class SOCPossibleHandsSpec extends FunSpec with Matchers {
     it("should return a nonempty map if a resource set is gained") {
       val gain = possHands.calculateHands(List(Gain(0, resourceSet)))
       gain.probableHands should not be empty
+    }
+
+    it("should calculate probable hands from stolen hands") {
+      val steal = possHands.calculateHands(List(Gain(0, resourceSet), Steal(1, 0, None), Steal(1, 0, None)))
+      val probableHands = steal.probableHands
+
     }
   }
 

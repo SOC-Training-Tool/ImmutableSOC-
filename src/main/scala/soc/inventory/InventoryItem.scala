@@ -8,7 +8,7 @@ sealed trait Port
 sealed abstract class Resource(val res: Int, val name: String) extends InventoryItem
 
 object Resource {
-  val list: List[Resource] = List(Wood, Sheep, Wheat, Brick, Ore)
+  val list: List[Resource with Port] = List(Wood, Sheep, Wheat, Brick, Ore)
 }
 
 case object Wood extends Resource(1, "Wood") with Port

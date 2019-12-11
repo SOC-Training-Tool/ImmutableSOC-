@@ -1,36 +1,39 @@
 package soc.moves
 
 import soc.board._
-import soc.core.GameRules
-import soc.inventory.Inventory.{PublicInfo, PerfectInfo}
+import soc.inventory.Inventory.{PerfectInfo, PublicInfo}
 import soc.inventory.resources.CatanResourceSet
 import soc.inventory._
-import soc.inventory.developmentCard.DevelopmentCardSet._
 import soc.inventory.resources.CatanResourceSet._
-import soc.state.{GameState, GamePhase}
+import soc.state.{GamePhase, GameState}
 
-case class CatanPossibleMoves (state: GameState[PublicInfo], inventory: PerfectInfo, playerPosition: Int)(implicit gameRules: GameRules) {
+object PossibleMoves {
 
-  val board: CatanBoard = state.board
-  val currPlayer = state.currentPlayer
-  val devCardsDeck = state.developmentCardsLeft
+  trait ResourceSetExtractor[T <: Inventory[T]] {
+    def extractResources(inventory: T): Seq[Resources]
+  }
 
-  def getPossibleMovesForState: Iterator[CatanMove] = {
+  implicit val perfectInfoResourceSetExtractor: ResourceSetExtractor[PerfectInfo] = inv => Seq(inv.resourceSet)
 
+  def getMovesForState[T <: Inventory[T]](state: GameState[PublicInfo], inventory: T, playerPosition: Int)(implicit resourceExtractor: ResourceSetExtractor[T]) = {
     val devCardMoves = if (!inventory.playedDevCards.playedCardOnTurn(state.turn)) {
-      getPossibleDevelopmentCard
+      getDevelopmentCards(state, inventory)
     } else Nil
 
     state.phase match {
-      case GamePhase.InitialPlacement => getPossibleInitialPlacements.iterator
+      case GamePhase.InitialPlacement => getInitialPlacements(state).iterator
       case GamePhase.Roll => (RollDiceMove :: devCardMoves).iterator
-      case GamePhase.BuyTradeOrEnd => (EndTurnMove :: getPossibleBuilds ::: getPossiblePortTrades ::: devCardMoves).iterator
-      case GamePhase.Discard => getPossibleDiscards()
-      case GamePhase.MoveRobber => getPossibleRobberLocations.iterator
+      case GamePhase.BuyTradeOrEnd => (EndTurnMove :: getPossibleBuilds(state, inventory) ::: getPossiblePortTrades(state, inventory) ::: devCardMoves).iterator
+      case GamePhase.Discard => getPossibleDiscards(inventory, playerPosition)()
+      case GamePhase.MoveRobber => getPossibleRobberLocations(state).iterator
     }
   }
 
-  def getPossibleInitialPlacements: List[InitialPlacementMove] = {
+  def getInitialPlacements(state: GameState[PublicInfo]): List[InitialPlacementMove] = {
+
+    val board: CatanBoard = state.board
+    val currPlayer = state.currentPlayer
+
     val first = board.getSettlementVerticesForPlayer(currPlayer).isEmpty
     board.getPossibleSettlements(currPlayer, true).flatMap { v =>
       val settlementBoard = board.buildSettlement(v, currPlayer)
@@ -40,51 +43,74 @@ case class CatanPossibleMoves (state: GameState[PublicInfo], inventory: PerfectI
     }.toList
   }
 
-  lazy val getPossibleSettlements: List[BuildSettlementMove] = if (board.getNumSettlementsForPlayer(playerPosition) < gameRules.numSettlements && inventory.canBuild(Settlement.cost)) {
-    board.getPossibleSettlements(currPlayer, false).toList.map(v => BuildSettlementMove(v))
-  } else Nil
+  def getSettlements[T <: Inventory[T]](state: GameState[PublicInfo], inventory: T): List[BuildSettlementMove] = {
+    val board: CatanBoard = state.board
+    val currPlayer = state.currentPlayer
+    val gameRules = state.rules
 
-  lazy val getPossibleCities: List[BuildCityMove] = if (board.getNumCitiesForPlayer(playerPosition) < gameRules.numCities && inventory.canBuild(City.cost)) {
-    board.getPossibleCities(currPlayer).toList.map(BuildCityMove)
-  } else Nil
-
-  lazy val getPossibleRoads: List[BuildRoadMove] = if (board.getNumRoadsForPlayer(playerPosition) < gameRules.numRoads && inventory.canBuild(Road.cost)) {
-    board.getPossibleRoads(currPlayer).toList.map(BuildRoadMove)
-  } else Nil
-
-  lazy val getPossibleDevelopmentCards: List[BuyDevelopmentCardMove.type] = if(inventory.canBuild(DevelopmentCard.cost) && devCardsDeck > 0) {
-    List(BuyDevelopmentCardMove)
-  } else Nil
-
-
-  def getPossibleBuilds: List[CatanMove] = {
-   getPossibleSettlements ::: getPossibleCities ::: getPossibleRoads ::: getPossibleDevelopmentCards
+    if (board.getNumSettlementsForPlayer(currPlayer) < gameRules.numSettlements && inventory.canSpend(Settlement.cost)) {
+      board.getPossibleSettlements(currPlayer, false).toList.map(v => BuildSettlementMove(v))
+    } else Nil
   }
 
-  def getPossiblePortTrades: List[PortTradeMove] = {
-    val resourceSet = inventory.resourceSet
+  def getCities[T <: Inventory[T]](state: GameState[PublicInfo], inventory: T): List[BuildCityMove] = {
+    val board: CatanBoard = state.board
+    val currPlayer = state.currentPlayer
+    val gameRules = state.rules
 
-    val ports = board.getPortsForPlayer(playerPosition)
+    if (board.getNumCitiesForPlayer(currPlayer) < gameRules.numCities && inventory.canSpend(City.cost)) {
+      board.getPossibleCities(currPlayer).toList.map(BuildCityMove)
+    } else Nil
+  }
+
+  def getRoads[T <: Inventory[T]](state: GameState[PublicInfo], inventory: T): List[BuildRoadMove] = {
+    val board: CatanBoard = state.board
+    val currPlayer = state.currentPlayer
+    val gameRules = state.rules
+
+    if (board.getNumRoadsForPlayer(currPlayer) < gameRules.numRoads && inventory.canSpend(Road.cost)) {
+      board.getPossibleRoads(currPlayer).toList.map(BuildRoadMove)
+    } else Nil
+  }
+
+  def getDevelopmentCards[T <: Inventory[T]](state: GameState[PublicInfo], inventory: T): List[BuyDevelopmentCardMove.type] = {
+    val devCardsDeck = state.developmentCardsLeft
+
+    if(inventory.canSpend(DevelopmentCard.cost) && devCardsDeck > 0) {
+      List(BuyDevelopmentCardMove)
+    } else Nil
+  }
+
+  def getPossibleBuilds[T <: Inventory[T]](state: GameState[PublicInfo], inventory: T): List[CatanMove] = {
+    getSettlements(state, inventory) ::: getCities(state, inventory) ::: getRoads(state, inventory) ::: getDevelopmentCards(state, inventory)
+  }
+
+  def getPossiblePortTrades[T <: Inventory[T]](state: GameState[PublicInfo], inventory: T): List[PortTradeMove] = {
+    val board = state.board
+    val currPlayer = state.currentPlayer
+
+    def canSpend(res: Resource, amount: Int): Boolean = inventory.canSpend(CatanResourceSet.fromMap(Map(res -> 2)))
+
+    val ports = board.getPortsForPlayer(currPlayer)
 
     val _3to1 = ports.contains(Misc)
     Resource.list.flatMap { res =>
-      val otherRes = Resource.list.filterNot(_ == res)
-      val num = resourceSet.getAmount(res)
-      if ( ports.contains(res.asInstanceOf[Port]) && num >= 2) {
+      val otherRes: Seq[Resource with Port] = Resource.list.filterNot(_ == res)
+      if ( ports.contains(res) && canSpend(res, 2)) {
         val give = CatanResourceSet().add(2, res)
         otherRes.map{ r =>
           val get = CatanResourceSet().add(1, r)
           PortTradeMove(give,  get)
         }
       }
-      else if (_3to1 && num >= 3) {
+      else if (_3to1 && canSpend(res, 3)) {
         val give =  CatanResourceSet().add(3, res)
         otherRes.map{ r =>
           val get = CatanResourceSet().add(1, r)
           PortTradeMove(give,  get)
         }
       }
-      else if(num >= 4) {
+      else if(canSpend(res, 4)) {
         val give =  CatanResourceSet().add(4, res)
         otherRes.map{ r =>
           val get = CatanResourceSet().add(1, r)
@@ -95,7 +121,10 @@ case class CatanPossibleMoves (state: GameState[PublicInfo], inventory: PerfectI
     }
   }
 
-  def getPossibleRobberLocations: List[MoveRobberAndStealMove] = {
+  def getPossibleRobberLocations(state: GameState[PublicInfo]): List[MoveRobberAndStealMove] = {
+    val board = state.board
+    val currPlayer = state.currentPlayer
+
     board.hexesWithNodes
       .filterNot(_.node == board.robberHex)
       .flatMap { hex =>
@@ -106,23 +135,31 @@ case class CatanPossibleMoves (state: GameState[PublicInfo], inventory: PerfectI
       }
   }.toList
 
-  def getPossibleDiscards(numToDiscard: Int = state.players.players.get(playerPosition).fold(0)(_.numCards / 2)) = {
-    CatanSet.toList[Resource, Resources](inventory.resourceSet).combinations(numToDiscard).map { resList =>
-      DiscardResourcesMove(CatanSet.fromList[Resource, CatanResourceSet[Int]](resList.toList))
+  def getPossibleDiscards[T <: Inventory[T]](inventory: T, playerPosition: Int)(numToDiscard: Int = inventory.numCards / 2)(implicit resourceExtractor: ResourceSetExtractor[T]): Iterator[DiscardResourcesMove] = {
+    resourceExtractor.extractResources(inventory).iterator.flatMap { resourceSet =>
+      CatanSet.toList[Resource, Resources](resourceSet).combinations(numToDiscard).map { resList =>
+        DiscardResourcesMove(CatanSet.fromList[Resource, CatanResourceSet[Int]](resList.toList))
+      }
     }
   }
 
-  def getPossibleDevelopmentCard: List[CatanMove] = if (state.canPlayCard) {
+  def getPossibleDevelopmentCard[T <: Inventory[T]](state: GameState[PublicInfo], inventory: T): List[CatanMove] = if (state.canPlayCard) {
 
-    val knight: List[KnightMove] = if (inventory.developmentCards.canPlayCardOnTurn(Knight, state.turn)) {
-      getPossibleRobberLocations.map(KnightMove)
+    val board = state.board
+    val currPlayer = state.currentPlayer
+    val gameRules = state.rules
+
+    def canPlayCard(card: DevelopmentCard, turn: Int): Boolean = inventory.canPlayCard(card, turn)
+
+    val knight: List[KnightMove] = if (canPlayCard(Knight, state.turn)) {
+      getPossibleRobberLocations(state).map(KnightMove)
     } else Nil
 
-    val monopoly: List[MonopolyMove] = if (inventory.developmentCards.canPlayCardOnTurn(Monopoly, state.turn)) {
+    val monopoly: List[MonopolyMove] = if (canPlayCard(Monopoly, state.turn)) {
       Resource.list.map(MonopolyMove)
     } else Nil
 
-    val yearOfPlenty: List[YearOfPlentyMove] = if (inventory.developmentCards.canPlayCardOnTurn(YearOfPlenty, state.turn)) {
+    val yearOfPlenty: List[YearOfPlentyMove] = if (canPlayCard(YearOfPlenty, state.turn)) {
       Resource.list.flatMap { res1 =>
         Resource.list.map { res2 =>
           YearOfPlentyMove(res1, res2)
@@ -130,11 +167,11 @@ case class CatanPossibleMoves (state: GameState[PublicInfo], inventory: PerfectI
       }
     } else Nil
 
-    val roads: List[RoadBuilderMove] = if (inventory.developmentCards.canPlayCardOnTurn(RoadBuilder, state.turn) && board.getNumRoadsForPlayer(playerPosition) < gameRules.numRoads) {
+    val roads: List[RoadBuilderMove] = if (canPlayCard(RoadBuilder, state.turn) && board.getNumRoadsForPlayer(currPlayer) < gameRules.numRoads) {
       val firsRoadsAndBoards = board.getPossibleRoads(currPlayer).map { road1 =>
         (road1, board.buildRoad(road1, currPlayer))
       }
-      if (board.getNumRoadsForPlayer(playerPosition) < gameRules.numRoads - 1) {
+      if (board.getNumRoadsForPlayer(currPlayer) < gameRules.numRoads - 1) {
         firsRoadsAndBoards.flatMap {case (road1, newBoard) =>
           newBoard.getPossibleRoads(currPlayer).map { road2 =>
             RoadBuilderMove(road1, Some(road2))

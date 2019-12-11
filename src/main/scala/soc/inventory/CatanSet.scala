@@ -55,12 +55,14 @@ trait CatanSet[A <: InventoryItem, T, U <: CatanSet[A, T, U]] {
       e.contains(this.asInstanceOf[U]) && this.contains(e)
     case _ => false
   }
+
 }
 
 object CatanSet {
 
   implicit def toList[A <: InventoryItem, U <: CatanSet[A, Int, U]](set: CatanSet[A, Int, U]): Seq[A] = set.amountMap.toList.flatMap { case (a, amt) => (1 to amt).map(_ => a)}
-  implicit def fromList[A <: InventoryItem, U <: CatanSet[A, Int, U]](list: Seq[A])(implicit e: Empty[A, Int, U]): U = list.foldLeft(e.empty){case (set, a) => set.add(1, a)}
+  implicit def fromMap[A <: InventoryItem, T: Numeric, U <: CatanSet[A, T, U]](invMap: Map[A, T])(implicit e: Empty[A, T, U]): U = invMap.foldLeft(e.empty){case (set, (a, amt)) => set.add(amt, a)}
+  implicit def fromList[A <: InventoryItem, U <: CatanSet[A, Int, U]](list: Seq[A])(implicit e: Empty[A, Int, U]): U = fromMap(list.map(_ -> 1).toMap)
 }
 
 trait Empty[A <: InventoryItem, T, U <: CatanSet[A, T, U]] {

@@ -84,6 +84,7 @@ case class PossibleHands(hands: Seq[Map[Int, (Resources, Int)]]) {
 object SOCPossibleHands {
 
   def empty = PossibleHands(Nil)
+
 }
 
 sealed trait SOCTransactions
