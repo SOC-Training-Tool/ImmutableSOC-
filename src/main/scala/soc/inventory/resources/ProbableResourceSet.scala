@@ -1,9 +1,16 @@
 package soc.inventory.resources
 
-import CatanResourceSet.{ResourceSet, Resources}
+import ResourceSet.{ResourceSet, Resources}
 import soc.inventory._
 
-class ProbableResourceSet(known: ResourceSet[Int], unknown: ResourceSet[Double]) extends CatanResourceSet(unknown.getAmount(Brick), unknown.getAmount(Ore), unknown.getAmount(Sheep), unknown.getAmount(Wheat), unknown.getAmount(Wood)) {
+class ProbableResourceSet(val known: ResourceSet[Int], val unknown: ResourceSet[Double]) extends CatanSet[Resource, Double](
+  Map[Resource, Double](
+    Brick -> (known.getAmount(Brick) + unknown.getAmount(Brick)),
+    Ore -> (known.getAmount(Ore) + unknown.getAmount(Ore)),
+    Sheep -> (known.getAmount(Sheep) + unknown.getAmount(Sheep)),
+    Wheat -> (known.getAmount(Wheat) + unknown.getAmount(Wheat)),
+    Wood -> (known.getAmount(Wood) + unknown.getAmount(Wood))
+  )) {
 
   /**
     * How many resources of this type are contained in the set?
@@ -17,10 +24,6 @@ class ProbableResourceSet(known: ResourceSet[Int], unknown: ResourceSet[Double])
 
   def getUnknownAmount(resourceType: Resource): Double = unknown.getAmount(resourceType)
 
-  override def getAmount(resourceType: Resource): Double = getKnownAmount(resourceType) + getProbableAmount(resourceType)
-
-  def getProbableAmount(resourceType: Resource): Double = (getKnownAmount(resourceType) + getUnknownAmount(resourceType)) / getTotal
-
   /**
     * Does the set contain any resources of this type?
     *
@@ -31,7 +34,7 @@ class ProbableResourceSet(known: ResourceSet[Int], unknown: ResourceSet[Double])
     */
   override def contains(resourceType: Resource): Boolean = getKnownAmount(resourceType) > 0
 
-  def mightContain(resourceType: Resource): Boolean = getAmount(resourceType) > 0
+  def mightContain(resourceType: Resource): Boolean = unknown.getAmount(resourceType) > 0
 
   def probabilityContains(resourceType: Resource): Double = {
     if (contains(resourceType)) 1.0
@@ -74,20 +77,17 @@ class ProbableResourceSet(known: ResourceSet[Int], unknown: ResourceSet[Double])
 
   def mightContain(other: Resources): Boolean =  Resource.list.forall { res => getAmount(res).ceil >= other.getAmount(res) }
 
-  override val toString: String =  Resource.list.filter(getAmount(_) > 0).map { res: Resource =>
+  override lazy val toString: String =  Resource.list.filter(getAmount(_) > 0).map { res: Resource =>
     s"${res.name}= ${known.getAmount(res)}:${unknown.getAmount(res)}"
   }.mkString(", ")
 
-  val knownWithProbabilityUnknown: String =  Resource.list.filter(getAmount(_) > 0).map { res: Resource =>
-    s"${res.name}= ${getAmount(res) + (if(getUnknownTotal > 0) getProbableAmount(res) / getUnknownTotal else 0)}"
+  lazy val knownWithProbabilityUnknown: String =  Resource.list.filter(getAmount(_) > 0).map { res: Resource =>
+    s"${res.name}= ${getAmount(res)}"
   }.mkString(", ")
 
-  def copy(_known: ResourceSet[Int] = known, _unknown: ResourceSet[Double] = unknown): ProbableResourceSet = {
-    val knownCopy: CatanResourceSet[Int] = _known.copy
-    val unknownCopy: CatanResourceSet[Double] = _unknown.copy
-
-    ProbableResourceSet(knownCopy, unknownCopy)
-  }
+//  def cpy(known: ResourceSet[Int] = known, unknown: ResourceSet[Double] = unknown): ProbableResourceSet = {
+//    ProbableResourceSet(known.copy(), unknown.copy())
+//  }
 }
 
 object ProbableResourceSet {
@@ -96,7 +96,7 @@ object ProbableResourceSet {
     new ProbableResourceSet(known, unknown)
   }
 
-  val empty = ProbableResourceSet(CatanResourceSet.empty[Int], CatanResourceSet.empty[Double])
+  val empty = ProbableResourceSet(ResourceSet.empty[Int], ResourceSet.empty[Double])
 }
 
 

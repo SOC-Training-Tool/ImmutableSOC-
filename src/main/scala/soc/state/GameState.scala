@@ -4,15 +4,18 @@ import soc.board._
 import soc.core._
 import soc.inventory.Inventory.PublicInfo
 import soc.inventory._
-import soc.inventory.resources.CatanResourceSet._
+import soc.inventory.resources.ResourceSet._
 import soc.inventory.resources._
 import soc.moves._
+import soc.state.GamePhase.GameOver
 import soc.state.player._
+
+import scala.collection.MapView
 
 case class GameState[T <: Inventory[T]](
   board: CatanBoard,
   players: PlayerStateHelper[T],
-  resourceBank: CatanResourceSet[Int],
+  resourceBank: ResourceSet[Int],
   developmentCardsLeft: Int,
   currentPlayer: Int,
   phase: GamePhase,
@@ -35,7 +38,7 @@ case class GameState[T <: Inventory[T]](
   private def transition (
     board: CatanBoard = board,
     players: PlayerStateHelper[T] = players,
-    resourceBank: CatanResourceSet[Int] = resourceBank,
+    resourceBank: ResourceSet[Int] = resourceBank,
     developmentCardsLeft: Int = developmentCardsLeft,
     currentPlayer: Int = currentPlayer,
     phase: GamePhase = phase,
@@ -45,7 +48,8 @@ case class GameState[T <: Inventory[T]](
     transactions: List[SOCTransactions] = Nil
   ): StateTransition[T] = {
     val state = copy(board, players.updateResources(transactions), resourceBank, developmentCardsLeft, currentPlayer, phase, turn, rules, expectingDiscard)
-    StateTransition(state, transactions)
+    val nextState = if (state.isOver) state.copy(phase = GameOver) else state
+    StateTransition( nextState, transactions)
   }
 
   val isOver = !players.players.values.toSeq.find(_.points >= rules.pointsToWin).isEmpty
@@ -55,6 +59,8 @@ case class GameState[T <: Inventory[T]](
 
   val firstPlayerId: Int = players.firstPlayerId
   val lastPlayerId: Int = players.lastPlayerId
+
+  def getPlayerInfo[A](f: PlayerState[T] => A): Map[Int, A] = players.players.view.mapValues(f(_)).toMap
 
   def initialPlacement(result: InitialPlacementMove): StateTransition[T] = initialPlacement(result.first, result.settlement, result.road)
   def initialPlacement(first: Boolean, vertex: Vertex, edge: Edge): StateTransition[T] = {
@@ -66,8 +72,8 @@ case class GameState[T <: Inventory[T]](
           case (resource, _) => resource
         }
       }
-      CatanResourceSet.fromList(resList: _*)
-    } else CatanResourceSet.empty[Int]
+      ResourceSet(resList:_*)
+    } else ResourceSet.empty[Int]
     val newTransactions = if (!resourcesFromSettlement.isEmpty) List(Gain(currentPlayer, resourcesFromSettlement))
     else Nil
     val nextTurn = (first, currentPlayer) match {
@@ -97,7 +103,7 @@ case class GameState[T <: Inventory[T]](
     }
 
     val resForPlayers: Map[Int, Resources] = board.getResourcesGainedOnRoll(diceRoll.number)
-    val totalResourcesCollected: Resources = resForPlayers.values.foldLeft(CatanResourceSet.empty[Int])(_.add(_))
+    val totalResourcesCollected: Resources = resForPlayers.values.foldLeft(ResourceSet.empty[Int])(_.add(_))
     val actualResForPlayers = if (!resourceBank.contains(totalResourcesCollected)) {
       val overflowTypes = {
         val total = resourceBank.subtract(totalResourcesCollected)
@@ -109,10 +115,10 @@ case class GameState[T <: Inventory[T]](
         }
       }
     } else resForPlayers
-    val trueTotalCollected = actualResForPlayers.values.foldLeft(CatanResourceSet.empty[Int])(_.add(_))
+    val trueTotalCollected = actualResForPlayers.values.foldLeft(ResourceSet.empty[Int])(_.add(_))
 
     val newTransactions: List[Gain] = players.getPlayers.map { player =>
-      Gain(player.position, actualResForPlayers.getOrElse(player.position, CatanResourceSet()))
+      Gain(player.position, actualResForPlayers.getOrElse(player.position, ResourceSet()))
     }.filterNot(_.resourceSet.isEmpty).toList
 
     transition(
@@ -125,7 +131,7 @@ case class GameState[T <: Inventory[T]](
   def playersDiscardFromSeven(discard: DiscardResourcesResult): StateTransition[T] = playersDiscardFromSeven(discard.resourceLost)
   def playersDiscardFromSeven(cardsLost: Map[Int, Resources]): StateTransition[T] = {
     val newTransactions: List[SOCTransactions] = cardsLost.toSeq.map { case (pos, res) => Lose(pos, res)}.toList
-    val totalLost: Resources = CatanResourceSet.sum(cardsLost.values.toSeq)
+    val totalLost: Resources = CatanSet.sum(cardsLost.values.toSeq)
     val newExpectingDiscard = expectingDiscard.filterNot(cardsLost.keys.toList.contains)
     transition (
       resourceBank = resourceBank.add(totalLost),
@@ -137,7 +143,7 @@ case class GameState[T <: Inventory[T]](
 
   def moveRobberAndSteal(result: MoveRobberAndStealResult): StateTransition[T] = moveRobberAndSteal(result.robberLocation, result.steal)
   def moveRobberAndSteal(robberLocation: Int, steal: Option[RobPlayer]): StateTransition[T] = {
-    val newTransactions = steal.fold(List.empty[SOCTransactions])(s => List(Steal(currentPlayer, s.player, s.res.map(CatanResourceSet.fromList(_)))))
+    val newTransactions = steal.fold(List.empty[SOCTransactions])(s => List(Steal(currentPlayer, s.player, s.res.map(ResourceSet(_)))))
     transition (
       board = board.copy(robberHex = robberLocation),
       transactions = newTransactions,
@@ -194,6 +200,8 @@ case class GameState[T <: Inventory[T]](
 
   def playKnight(result: KnightResult): StateTransition[T] = playKnight(result.robber.robberLocation, result.robber.steal)
   def playKnight(robberLocation: Int, steal: Option[RobPlayer]): StateTransition[T] = {
+    import soc.inventory.developmentCard.DevelopmentCardSet._
+    val numKnights = getPlayerInfo(_.playedDevCards.getAmount(Knight))
     transition(
       players = players.playKnight(currentPlayer, turn)
     ).state.moveRobberAndSteal(robberLocation, steal)
@@ -201,7 +209,7 @@ case class GameState[T <: Inventory[T]](
 
   def playMonopoly(result: MonopolyResult): StateTransition[T] = playMonopoly(result.cardsLost)
   def playMonopoly(cardsLost: Map[Int, Resources]): StateTransition[T] = {
-    val newTransactions = Gain(currentPlayer, cardsLost.values.fold(CatanResourceSet.empty[Int])(_.add(_))) ::
+    val newTransactions = Gain(currentPlayer, cardsLost.values.fold(ResourceSet.empty[Int])(_.add(_))) ::
       cardsLost.map { case (player, cards) => Lose(player, cards) }.toList
     transition (
       players = players.playMonopoly(currentPlayer, turn),
@@ -211,7 +219,7 @@ case class GameState[T <: Inventory[T]](
 
   def playYearOfPlenty(result: YearOfPlentyMove): StateTransition[T] = playYearOfPlenty(result.res1, result.res2)
   def playYearOfPlenty(card1: Resource, card2: Resource): StateTransition[T] = {
-    val set = CatanResourceSet.fromList(card1, card2)
+    val set = ResourceSet(card1, card2)
     val newTransactions = List(Gain(currentPlayer, set))
     transition(
       resourceBank = resourceBank.subtract(set),
@@ -228,6 +236,8 @@ case class GameState[T <: Inventory[T]](
       players = players.playRoadBuilder(currentPlayer, turn)
     )
   }
+
+  def revealPoint: StateTransition[T] = transition(players = players.playPointCard(currentPlayer, turn))
 
   def trade(result: PlayerTradeMove): StateTransition[T] = trade(result.to, result.give, result.get)
   def trade(to: Int, give: Resources, get: Resources): StateTransition[T] = {
@@ -280,6 +290,7 @@ case class GameState[T <: Inventory[T]](
     case r: YearOfPlentyMove => playYearOfPlenty(r)
     case r: MonopolyResult => playMonopoly(r)
     case r: RoadBuilderMove => playRoadBuilder(r)
+    case RevealPoint => revealPoint
     case r: DiscardResourcesResult => playersDiscardFromSeven(r)
     case _ => transition()
   }
@@ -287,9 +298,9 @@ case class GameState[T <: Inventory[T]](
 
 object GameState {
 
-  def apply[T <: Inventory[T]](board: CatanBoard, playerNameIds: Seq[(String, Int)], rules: GameRules)(implicit factory: InventoryHelperFactory[T]): GameState[T] = {
+  def apply[T <: Inventory[T]](board: CatanBoard, playerPos: Seq[Int], rules: GameRules)(implicit factory: InventoryHelperFactory[T]): GameState[T] = {
     implicit val gameRules = rules
-    val psHelper: PlayerStateHelper[T] = PlayerStateHelper[T](playerNameIds)
+    val psHelper: PlayerStateHelper[T] = PlayerStateHelper[T](playerPos)
     GameState(board, psHelper, rules)
   }
 
@@ -305,7 +316,6 @@ object GameState {
       0,
       rules,
       Nil)
-
   }
 }
 

@@ -2,8 +2,8 @@ package soc.board
 
 import soc.core.Roll
 import soc.inventory._
-import soc.inventory.resources.CatanResourceSet
-import soc.inventory.resources.CatanResourceSet.Resources
+import soc.inventory.resources.ResourceSet
+import soc.inventory.resources.ResourceSet.Resources
 import util.MapReverse
 
 import scala.util.Random
@@ -172,7 +172,7 @@ case class CatanBoard private(
           case _ => Nil
         }
       }
-    }.groupBy(_._1).view.mapValues(_.map(_._2).foldLeft(CatanResourceSet.empty[Int])(_.add(1, _)))
+    }.groupBy(_._1).view.mapValues(_.map(_._2).foldLeft(ResourceSet.empty[Int])(_.add(1, _)))
   }.toMap
 
   def calcLongestRoadLength(playerId: Int): Int = {

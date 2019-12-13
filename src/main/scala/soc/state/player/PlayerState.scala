@@ -3,13 +3,11 @@ package soc.state.player
 import soc.board._
 import soc.core.GameRules
 import soc.inventory._
-import soc.inventory.developmentCard.DevelopmentCardSet._
 import soc.inventory.developmentCard.{DevelopmentCardSpecificationSet}
-import soc.inventory.resources.CatanResourceSet
-import soc.inventory.resources.CatanResourceSet.ResourceSet
+import soc.inventory.resources.ResourceSet
+import soc.inventory.resources.ResourceSet.ResourceSet
 
 case class PlayerState[T <: Inventory[T]](
-  name: String,
   position: Int,
   inventory: T,
   armyPoints: Int = 0,
@@ -18,7 +16,7 @@ case class PlayerState[T <: Inventory[T]](
   settlements: List[Vertex] = Nil,
   cities: List[Vertex] = Nil,
   roads: List[Edge] = Nil,
-  dots: ResourceSet[Int] = CatanResourceSet.empty,
+  dots: ResourceSet[Int] = ResourceSet.empty,
   roadLength: Int = 0) {
 
   val settlementPoints = settlements.length

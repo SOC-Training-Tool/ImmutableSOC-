@@ -6,7 +6,7 @@ import soc.inventory.developmentCard._
 import soc.inventory.resources.{PossibleHands, ProbableResourceSet, SOCPossibleHands, SOCTransactions}
 import soc.state.player.PlayerState
 
-trait InventoryHelper[T <: Inventory[T]] {
+sealed trait InventoryHelper[T <: Inventory[T]] {
 
   implicit val gameRules: GameRules
 
@@ -59,7 +59,7 @@ case class ProbableInfoInventoryHelper(
 
   override def buyDevelopmentCard(players: Map[Int, PlayerState[ProbableInfo]], id: Int, turn: Int, card: Option[DevelopmentCard]): (Map[Int, PlayerState[ProbableInfo]], InventoryHelper[ProbableInfo])  = card match {
     case Some(dcard) =>
-      val newPossibleDevCards = possibleDevCards.buyKnownCard(id, dcard)
+      val newPossibleDevCards = possibleDevCards.buyKnownCard(id, turn, dcard)
       updateDevCards(turn, players, newPossibleDevCards)
 
     case None =>
@@ -73,8 +73,7 @@ case class ProbableInfoInventoryHelper(
         val possDevCards = possibleDevelopmentCards(i)
         i -> ps.updateDevelopmentCard(
           turn,
-          (possDevCards.playedDevCards,
-          possDevCards.knownunplayedDevCards,
+          (possDevCards.knownDevCards,
           possDevCards.unknownDevCards)
         )
       }, update)
@@ -89,15 +88,12 @@ case class PublicInfoInventoryHelper()(implicit val gameRules: GameRules) extend
     (players.view.mapValues(_.updateResources(transactions)).toMap, this)
   }
 
-
   override def playDevelopmentCard(players: Map[Int, PlayerState[PublicInfo]], id: Int, turn: Int, card: DevelopmentCard):(Map[Int, PlayerState[PublicInfo]], InventoryHelper[PublicInfo]) = {
     (players.map {
       case(`id`, ps) => id -> ps.updateDevelopmentCard(turn, PlayDevelopmentCard(id, card))
       case (i, ps) => i -> ps
     }, this)
   }
-
-
 
   override def buyDevelopmentCard(players: Map[Int, PlayerState[PublicInfo]], id: Int, turn: Int, card: Option[DevelopmentCard]): (Map[Int, PlayerState[PublicInfo]], InventoryHelper[PublicInfo]) = {
     (players.map {
@@ -106,11 +102,10 @@ case class PublicInfoInventoryHelper()(implicit val gameRules: GameRules) extend
     }, this)
   }
 
-
   override def createInventory: PublicInfo = new PublicInfoInventory
 }
 
-trait InventoryHelperFactory[T <: Inventory[T]] {
+sealed trait InventoryHelperFactory[T <: Inventory[T]] {
   def createInventoryHelper(implicit gameRules: GameRules): InventoryHelper[T]
 }
 
@@ -128,6 +123,7 @@ object InventoryHelper {
     override def createInventoryHelper(implicit gameRules: GameRules): InventoryHelper[PublicInfo] = PublicInfoInventoryHelper()
   }
 }
+
 
 
 
