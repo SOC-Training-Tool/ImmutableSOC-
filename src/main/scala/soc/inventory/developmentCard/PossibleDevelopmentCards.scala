@@ -5,22 +5,19 @@ import soc.inventory.DevelopmentCard
 import soc.inventory.developmentCard.DevelopmentCardSet._
 
 case class PossibleDevCardsHands(
-  playedDevCards: DevelopmentCardSpecificationSet = DevelopmentCardSpecificationSet(),
-  knownunplayedDevCards: PlayedInventory = DevelopmentCardSet.empty[Int],
+  knownDevCards: DevelopmentCardSpecificationSet = DevelopmentCardSpecificationSet(),
   numUnknownDevCards: Int = 0,
-  unknownDevCards: UnplayedInventory = DevelopmentCardSet.empty[Double])
+  unknownDevCards: DevelopmentCardSet[Double] = DevelopmentCardSet.empty[Double])
 
 case class PossibleDevelopmentCards(cards: Map[Int, PossibleDevCardsHands] = Map.empty)(implicit gameRules: GameRules) {
 
   def apply(player: Int): PossibleDevCardsHands = cards.getOrElse(player, PossibleDevCardsHands())
 
-  lazy val knownCards: DevelopmentCardSet[Int] = cards.toSeq.map { case (_, pdev) =>
-    pdev.playedDevCards.add(pdev.knownunplayedDevCards)
-  }.foldLeft(DevelopmentCardSet.empty[Int])(_.add(_))
+  lazy val knownCards: DevelopmentCardSet[Int] = cards.toSeq.map { case (_, pdev) => pdev.knownDevCards}.foldLeft(DevelopmentCardSet.empty[Int])(_.add(_))
 
   lazy val prob: DevelopmentCardSet[Double] = {
     val left = gameRules.initDevCardAmounts.subtract(knownCards)
-    DevelopmentCardSet.toInventory(left.amountMap.map { case (card, amt) =>
+    DevelopmentCardSet(left.amountMap.map[DevelopmentCard, Double] { case (card, amt) =>
       card -> amt.toDouble / left.getTotal.toDouble
     })
   }
@@ -33,10 +30,10 @@ case class PossibleDevelopmentCards(cards: Map[Int, PossibleDevCardsHands] = Map
     }
   )
 
-  def buyKnownCard(player: Int, card: DevelopmentCard): PossibleDevelopmentCards =
+  def buyKnownCard(player: Int, turn: Int, card: DevelopmentCard): PossibleDevelopmentCards =
     cards.get(player).fold(copy(cards + (player -> PossibleDevCardsHands())))(_ => this).copy(
       cards.map {
-        case (`player`, hand) => player -> hand.copy(knownunplayedDevCards = hand.knownunplayedDevCards.add(1, card))
+        case (`player`, hand) => player -> hand.copy(knownDevCards = hand.knownDevCards.buyCard(turn, card))
         case (p, hand) => p -> hand
       }
     ).updateUnknownDevCards
@@ -49,18 +46,18 @@ case class PossibleDevelopmentCards(cards: Map[Int, PossibleDevCardsHands] = Map
       }
     ).updateUnknownDevCards
 
-  def playCard(turn: Int, player: Int, card: DevelopmentCard): PossibleDevelopmentCards = copy(
-    cards.map {
-      case (`player`, hand) =>
-        val addPlayedCard = hand.copy(playedDevCards = hand.playedDevCards.playCard(turn, card))
-        player -> {
-          if (addPlayedCard.knownunplayedDevCards.contains(card)) {
-            addPlayedCard.copy(knownunplayedDevCards = addPlayedCard.knownunplayedDevCards.subtract(1, card))
-          } else addPlayedCard.copy(numUnknownDevCards = addPlayedCard.numUnknownDevCards - 1)
-        }
-      case (p, hand) => p -> hand
-    }
-  ).updateUnknownDevCards
+  def playCard(turn: Int, player: Int, card: DevelopmentCard): PossibleDevelopmentCards = {
+    val insert = cards.get(player).fold(copy(cards + (player -> PossibleDevCardsHands())))(_ => this)
+    insert.copy {
+      insert.cards.map {
+        case (`player`, hand) =>
+          val known = hand.knownDevCards.filterUnPlayed.contains(card)
+          val addPlayedCard: PossibleDevCardsHands = hand.copy(knownDevCards = hand.knownDevCards.playCard(turn, card))
+          player -> (if (known) addPlayedCard else addPlayedCard.copy(numUnknownDevCards = addPlayedCard.numUnknownDevCards - 1))
+        case (p, hand) => p -> hand
+      }
+    }.updateUnknownDevCards
+  }
 
 
 }

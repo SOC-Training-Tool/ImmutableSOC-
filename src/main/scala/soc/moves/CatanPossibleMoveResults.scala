@@ -1,11 +1,12 @@
 package soc.moves
 
 import soc.core.Roll
-import soc.inventory.{CatanSet, DevelopmentCard, Inventory, Resource}
+import soc.inventory.{CatanSet, Inventory, Resource}
 import soc.inventory.Inventory.PerfectInfo
 import soc.inventory.developmentCard.DevelopmentCardSet
-import soc.inventory.resources.CatanResourceSet
-import soc.inventory.resources.CatanResourceSet.Resources
+import soc.inventory.developmentCard.DevelopmentCardSet.DevelopmentCardSet
+import soc.inventory.resources.ResourceSet
+import soc.inventory.resources.ResourceSet.{ResourceSet, Resources}
 import soc.moves.PossibleMoves.ResourceSetExtractor
 import soc.state.GameState
 import util.CombinationMapIterator
@@ -20,21 +21,8 @@ object CatanPossibleMoveResults {
 
     override implicit val resourceSetExtractor: ResourceSetExtractor[PerfectInfo] = PossibleMoves.perfectInfoResourceSetExtractor
 
-    override def robberMoveResult(state: GameState[PerfectInfo], playerPosition: Int, moveRobberAndStealMove: MoveRobberAndStealMove): Seq[(Double, MoveRobberAndStealResult)] = moveRobberAndStealMove match {
-      case MoveRobberAndStealMove(loc, None) => Seq((1.0, MoveRobberAndStealResult(Nil, loc, None)))
-      case MoveRobberAndStealMove(loc, Some(p)) =>
-        val resources: Resources = state.players.getPlayer(p).inventory.resourceSet
-        resources.getTypes.map { res =>
-          val prob = resources.getAmount(res).toDouble / resources.getTotal
-          (prob, MoveRobberAndStealResult(Seq(playerPosition, p), loc, Some(RobPlayer(p, Some(res)))))
-        }
-    }
-
     override def boughtDevCardsProbabilities(state: GameState[PerfectInfo]): DevelopmentCardSet[Double] = {
-      import DevelopmentCardSet._
-      val totalDevCardsBought = CatanSet.fromList(state.players.players.values.flatMap { p =>
-        p.inventory.developmentCards.toList
-      }.toSeq)
+      val totalDevCardsBought = CatanSet.fromList(state.players.players.values.flatMap { _.inventory.developmentCards.toList}.toSeq)
       val leftInDeck = state.rules.initDevCardAmounts.subtract(totalDevCardsBought)
       CatanSet.fromMap(leftInDeck.getTypes.map { card =>
         card -> leftInDeck.getAmount(card).toDouble / leftInDeck.getTotal
@@ -42,10 +30,18 @@ object CatanPossibleMoveResults {
     }
 
     override def monopolyResults(state: GameState[PerfectInfo], res: Resource, playerPosition: Int): Seq[ProbabilityOfStateIfMove[PerfectInfo]] = {
-      val result = MonopolyResult(state.players.players.filterNot(_._1 == playerPosition).view.mapValues(ps => CatanResourceSet.fromMap(Map(res -> ps.inventory.resourceSet.getAmount(res)))).toMap)
+      val resMap: Map[Int, ResourceSet[Int]] = state.players.players.filterNot(_._1 == playerPosition).view.mapValues(ps => ResourceSet[Int](Map(res -> ps.inventory.resourceSet.getAmount(res)))).toMap
+      val result = MonopolyResult(resMap)
       Seq(ProbabilityOfStateIfMove(1.0, Seq(result), state.apply(result).state))
     }
 
+    override def getSteal(state: GameState[PerfectInfo], playerPosition: Int, loc: Int, playerStole: Int): Seq[(Double, MoveRobberAndStealResult)] = {
+      val resources: Resources = state.players.getPlayer(playerStole).inventory.resourceSet
+      resources.getTypes.map { res =>
+        val prob = resources.getAmount(res).toDouble / resources.getTotal
+        (prob, MoveRobberAndStealResult(Seq(playerPosition, playerStole), loc, Some(RobPlayer(playerStole, Some(res)))))
+      }
+    }
   }
 }
 
@@ -82,9 +78,8 @@ trait MoveResultCalculator[T <: Inventory[T]] {
       ProbabilityOfStateIfMove(prob, Seq(robberResult), state.apply(robberResult).state)
     }
     case BuyDevelopmentCardMove =>
-      import DevelopmentCardSet._
       val totalDevCardsBought = boughtDevCardsProbabilities(state)
-      val leftInDeck = state.rules.initDevCardAmounts.amountMap.view.mapValues(_.toDouble).toMap.subtract(totalDevCardsBought)
+      val leftInDeck = DevelopmentCardSet(state.rules.initDevCardAmounts.amountMap.view.mapValues(_.toDouble).toMap).subtract(totalDevCardsBought)
       leftInDeck.getTypes.map { card =>
         val prob = leftInDeck.getAmount(card) / leftInDeck.getTotal
         val result = BuyDevelopmentCardResult(Seq(playerPosition), Some(card))
@@ -117,7 +112,12 @@ trait MoveResultCalculator[T <: Inventory[T]] {
     }
   }.toSeq
 
-  def robberMoveResult(state: GameState[T], playerPosition: Int, moveRobberAndStealMove: MoveRobberAndStealMove): Seq[(Double, MoveRobberAndStealResult)]
+  def robberMoveResult(state: GameState[T], playerPosition: Int, moveRobberAndStealMove: MoveRobberAndStealMove): Seq[(Double, MoveRobberAndStealResult)] = moveRobberAndStealMove match {
+    case MoveRobberAndStealMove(loc, None) => Seq((1.0, MoveRobberAndStealResult(Nil, loc, None)))
+    case MoveRobberAndStealMove(loc, Some(p)) => getSteal(state, playerPosition, loc, p)
+  }
+
+  def getSteal(state: GameState[T], playerPosition: Int, loc: Int, playerStole: Int): Seq[(Double, MoveRobberAndStealResult)]
 
   def boughtDevCardsProbabilities(state: GameState[T]): DevelopmentCardSet[Double]
 

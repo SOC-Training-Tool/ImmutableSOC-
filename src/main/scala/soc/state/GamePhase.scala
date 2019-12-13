@@ -9,5 +9,6 @@ object GamePhase {
   case object Discard extends GamePhase
   case object MoveRobber extends GamePhase
   case object InitialPlacement extends GamePhase
+  case object GameOver extends GamePhase
 }
 

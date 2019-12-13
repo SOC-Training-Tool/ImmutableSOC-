@@ -1,6 +1,6 @@
 package soc.inventory
 
-import soc.inventory.resources.CatanResourceSet
+import soc.inventory.resources.ResourceSet
 
 sealed trait InventoryItem
 
@@ -49,14 +49,14 @@ case class City(playerId: Int) extends VertexBuilding
 case class Road(playerId: Int) extends EdgeBuilding
 
 object Settlement {
-  val cost = CatanResourceSet(1, 0, 1, 1, 1)
+  val cost = ResourceSet(wo = 1, sh = 1, br = 1, wh = 1)
 }
 object City {
-  val cost = CatanResourceSet(0, 3, 0, 2, 0)
+  val cost = ResourceSet(or = 3, wh = 2)
 }
 object Road {
-  val cost = CatanResourceSet(1, 0, 0, 0, 1)
+  val cost = ResourceSet(wo = 1, br = 1)
 }
 object DevelopmentCard {
-  val cost = CatanResourceSet(0, 1, 1, 1, 0)
+  val cost = ResourceSet(or = 1, sh = 1, wh = 1)
 }

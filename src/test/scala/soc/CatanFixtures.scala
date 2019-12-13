@@ -1,10 +1,10 @@
 package soc
 
-import soc.board._
-import soc.core.Roll
-import soc.inventory._
-import soc.inventory.resources.CatanResourceSet
-import soc.moves._
+import board._
+import core.Roll
+import inventory._
+import inventory.resources.ResourceSet
+import moves._
 
 object CatanFixtures {
 
@@ -78,7 +78,7 @@ object CatanFixtures {
     EndTurnMove,
     // 2
     RollResult(Roll(9)),
-    PortTradeMove(CatanResourceSet(wo = 4), CatanResourceSet(or = 1)),
+    PortTradeMove(ResourceSet(wo = 4), ResourceSet(or = 1)),
     BuyDevelopmentCardResult(Seq(2), Some(CatanPoint)),
     BuildRoadMove(Edge(Vertex(24), Vertex(45))),
     EndTurnMove,
@@ -93,7 +93,7 @@ object CatanFixtures {
     EndTurnMove,
     // 1
     RollResult(Roll(5)),
-    PortTradeMove(CatanResourceSet(sh = 4), CatanResourceSet(wo = 1)),
+    PortTradeMove(ResourceSet(sh = 4), ResourceSet(wo = 1)),
     BuildRoadMove(Edge(Vertex(49), Vertex(50))) ,
     EndTurnMove,
     // 2
@@ -143,9 +143,9 @@ object CatanFixtures {
     EndTurnMove,
     // 2
     RollResult(Roll(5)),
-    PortTradeMove(CatanResourceSet(wh = 4), CatanResourceSet(wo = 1)),
+    PortTradeMove(ResourceSet(wh = 4), ResourceSet(wo = 1)),
     BuildSettlementMove(Vertex(24)),
-    PortTradeMove(CatanResourceSet(sh = 2), CatanResourceSet(wo = 1)),
+    PortTradeMove(ResourceSet(sh = 2), ResourceSet(wo = 1)),
     BuildRoadMove(Edge(Vertex(29), Vertex(30))),
     EndTurnMove,
     // 3
@@ -159,7 +159,7 @@ object CatanFixtures {
     KnightResult(MoveRobberAndStealResult(Seq(1, 2), 9, Some(RobPlayer(2, Some(Wheat))))),
     RollResult(Roll(9)),
     BuildRoadMove(Edge(Vertex(7), Vertex(8))),
-    PortTradeMove(CatanResourceSet(br = 4), CatanResourceSet(wo = 1)),
+    PortTradeMove(ResourceSet(br = 4), ResourceSet(wo = 1)),
     BuildSettlementMove(Vertex(8)),
     EndTurnMove,
     // 2
@@ -188,7 +188,7 @@ object CatanFixtures {
     // 1
     RollResult(Roll(5)),
     BuildCityMove(Vertex(34)),
-    PortTradeMove(CatanResourceSet(sh = 3), CatanResourceSet(wh = 1)),
+    PortTradeMove(ResourceSet(sh = 3), ResourceSet(wh = 1)),
     BuyDevelopmentCardResult(Seq(1), Some(CatanPoint)),
     EndTurnMove,
     // 2
@@ -196,12 +196,12 @@ object CatanFixtures {
     EndTurnMove,
     // 3
     RollResult(Roll(8)),
-    PortTradeMove(CatanResourceSet(sh = 3), CatanResourceSet(br = 1)),
+    PortTradeMove(ResourceSet(sh = 3), ResourceSet(br = 1)),
     BuildRoadMove(Edge(Vertex(9), Vertex(10))),
     EndTurnMove,
     // 0
     RollResult(Roll(7)),
-    DiscardResourcesResult(Map(1 -> CatanResourceSet(or = 3, br = 1))),
+    DiscardResourcesResult(Map(1 -> ResourceSet(or = 3, br = 1))),
     MoveRobberAndStealResult(Seq(0,1), 3, Some(RobPlayer(1, Some(Ore)))),
     BuyDevelopmentCardResult(Seq(0), Some(Knight)),
     EndTurnMove,
@@ -210,25 +210,25 @@ object CatanFixtures {
     EndTurnMove,
     // 2
     RollResult(Roll(8)),
-    PortTradeMove(CatanResourceSet(wh = 4), CatanResourceSet(wo = 1)),
+    PortTradeMove(ResourceSet(wh = 4), ResourceSet(wo = 1)),
     BuildSettlementMove(Vertex(29)),
     EndTurnMove,
     // 3
     RollResult(Roll(5)),
-    PortTradeMove(CatanResourceSet(or = 3), CatanResourceSet(wh = 1)),
+    PortTradeMove(ResourceSet(or = 3), ResourceSet(wh = 1)),
     BuyDevelopmentCardResult(Seq(3), Some(Monopoly)),
     EndTurnMove,
     // 0
     RollResult(Roll(10)),
     RoadBuilderMove(Edge(Vertex(20), Vertex(21)), Some(Edge(Vertex(39), Vertex(40)))),
-    PortTradeMove(CatanResourceSet(br = 2), CatanResourceSet(wo = 1)),
+    PortTradeMove(ResourceSet(br = 2), ResourceSet(wo = 1)),
     BuildSettlementMove(Vertex(20)),
     EndTurnMove,
     // 1
     RollResult(Roll(5)),
-    PortTradeMove(CatanResourceSet(sh = 3), CatanResourceSet(wh = 1)),
+    PortTradeMove(ResourceSet(sh = 3), ResourceSet(wh = 1)),
     BuyDevelopmentCardResult(Seq(1), Some(YearOfPlenty)),
-    PortTradeMove(CatanResourceSet(br = 3), CatanResourceSet(wh = 1)),
+    PortTradeMove(ResourceSet(br = 3), ResourceSet(wh = 1)),
     BuyDevelopmentCardResult(Seq(1), Some(YearOfPlenty)),
     EndTurnMove,
     // 2
@@ -236,16 +236,16 @@ object CatanFixtures {
     EndTurnMove,
     // 3
     RollResult(Roll(6)),
-    MonopolyResult(Map(0 -> CatanResourceSet(wh = 6), 2 -> CatanResourceSet(wh = 3))),
-    PortTradeMove(CatanResourceSet(wh = 3), CatanResourceSet(or = 1)),
-    PortTradeMove(CatanResourceSet(wh = 3), CatanResourceSet(or = 1)),
-    PortTradeMove(CatanResourceSet(wh = 3), CatanResourceSet(or = 1)),
+    MonopolyResult(Map(0 -> ResourceSet(wh = 6), 2 -> ResourceSet(wh = 3))),
+    PortTradeMove(ResourceSet(wh = 3), ResourceSet(or = 1)),
+    PortTradeMove(ResourceSet(wh = 3), ResourceSet(or = 1)),
+    PortTradeMove(ResourceSet(wh = 3), ResourceSet(or = 1)),
     BuildCityMove(Vertex(31)),
     EndTurnMove,
     // 0
     RollResult(Roll(3)),
     KnightResult(MoveRobberAndStealResult(Seq(0, 3), 0, Some(RobPlayer(3, Some(Wood))))),
-    PortTradeMove(CatanResourceSet(wo = 2), CatanResourceSet(wh = 1)),
+    PortTradeMove(ResourceSet(wo = 2), ResourceSet(wh = 1)),
     BuildSettlementMove(Vertex(39)),
     EndTurnMove,
     // 1
@@ -268,7 +268,26 @@ object CatanFixtures {
     EndTurnMove,
     // 1
     KnightResult(MoveRobberAndStealResult(Seq(0, 1), 7, Some(RobPlayer(0, Some(Wheat))))),
-    EndTurnMove
+    RevealPoint,
+    EndTurnMove,
+    //2
+    RevealPoint,
+    EndTurnMove,
+    //3
+    RevealPoint,
+    EndTurnMove,
+    //0
+    RevealPoint,
+    EndTurnMove,
+
   )
 
+  def perspectiveMoveResults(perspectivePlayers: Seq[Int]): Map[Int, Seq[MoveResult]] = {
+    val perspectiveMoves: Seq[Map[Int, MoveResult]] = testMoveResults.map(_.getPerspectiveResults(perspectivePlayers))
+    perspectivePlayers.map { playerId =>
+      playerId -> perspectiveMoves.map(_(playerId))
+    }.toMap
+  }
+
+  lazy val noInfoPerspective: Seq[MoveResult] = perspectiveMoveResults(Seq(-1))(-1)
 }

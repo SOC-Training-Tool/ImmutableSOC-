@@ -1,58 +1,51 @@
 package soc.inventory
 
-trait CatanSet[A <: InventoryItem, T, U <: CatanSet[A, T, U]] {
+case class CatanSet[A <: InventoryItem, T] protected(amountMap: Map[A, T])(implicit num: Numeric[T]) {
 
-  protected case class NumericWrapper()(implicit val wrapped: Numeric[T])
-  protected val implWrap: NumericWrapper
-  import implWrap.wrapped
-
-  protected def _copy(map: Map[A, T]): U
-  def copy: U = _copy(amountMap)
-
-  val amountMap: Map[A, T]
-
-  lazy val getTotal = wrapped.toInt(amountMap.values.sum)
+  lazy val getTotal = num.toInt(amountMap.values.sum)
   lazy val getTypes: Seq[A] = amountMap.keys.toSeq
-  lazy val getTypeCount = amountMap.values.count(wrapped.toDouble(_) > 0)
+  lazy val getTypeCount = amountMap.values.count(num.toDouble(_) > 0)
   lazy val isEmpty: Boolean = getTotal == 0
 
-  def add(amt: T, a: A): U = {
+  def copy(amountMap: Map[A, T] = amountMap): CatanSet[A, T] = CatanSet.fromMap(amountMap)
+
+  def add(amt: T, a: A): CatanSet[A, T] = {
     val curAmount = amountMap.get(a)
-    _copy(curAmount.fold(amountMap + (a -> amt)){ amount =>
-      (amountMap - a) + (a -> wrapped.plus(amount, amt))
+    copy(curAmount.fold(amountMap + (a -> amt)){ amount =>
+      (amountMap - a) + (a -> num.plus(amount, amt))
     })
   }
 
-  def add(set: U): U = {
-    set.getTypes.foldLeft(this._copy(amountMap)){ case (newSet, a) => newSet.add(set(a), a) }
+  def add(set: CatanSet[A, T]): CatanSet[A, T] = {
+    set.getTypes.foldLeft(this.copy(amountMap)){ case (newSet, a) => newSet.add(set(a), a) }
   }
 
-  def subtract(amt: T, a: A): U = {
+  def subtract(amt: T, a: A): CatanSet[A, T] = {
     val curAmount = amountMap.get(a)
     val newMap = curAmount.fold(amountMap) { amount =>
-      (amountMap - a) + (a -> wrapped.max(wrapped.zero, wrapped.minus(amount, amt)))
+      (amountMap - a) + (a -> num.max(num.zero, num.minus(amount, amt)))
     }
-    _copy(newMap)
+    copy(newMap)
   }
 
-  def subtract(set: U): U = {
-    set.getTypes.foldLeft(this._copy(amountMap)){ case (newSet, a) => newSet.subtract(set(a), a) }
+  def subtract(set: CatanSet[A, T]): CatanSet[A, T] = {
+    set.getTypes.foldLeft(this.copy(amountMap)){ case (newSet, a) => newSet.subtract(set(a), a) }
   }
 
-  def contains(amt: T, a: A): Boolean = amountMap.get(a).fold(false)(wrapped.gteq(_, amt))
-  def contains(a: A): Boolean = amountMap.get(a).fold(false)(wrapped.gt(_, wrapped.zero))
-  def contains(set: U): Boolean = {
+  def contains(amt: T, a: A): Boolean = amountMap.get(a).fold(false)(num.gteq(_, amt))
+  def contains(a: A): Boolean = amountMap.get(a).fold(false)(num.gt(_, num.zero))
+  def contains(set: CatanSet[A, T]): Boolean = {
     set.getTypes.filter(set.contains).forall(res => contains(set.getAmount(res), res))
   }
 
-  def getAmount(a: A): T = amountMap.getOrElse(a, wrapped.zero)
+  def getAmount(a: A): T = amountMap.getOrElse(a, num.zero)
 
   def apply(a: A): T = getAmount(a)
 
-  def canEqual(a: Any): Boolean = a.isInstanceOf[CatanSet[A, T, U]]
+  def canEqual(a: Any): Boolean = a.isInstanceOf[CatanSet[A, T]]
   override def equals(that: Any): Boolean = that match {
-    case e: U => this.canEqual(e) &&
-      e.contains(this.asInstanceOf[U]) && this.contains(e)
+    case e: CatanSet[A, T] => this.canEqual(e) &&
+      e.contains(this.asInstanceOf[CatanSet[A, T]]) && this.contains(e)
     case _ => false
   }
 
@@ -60,11 +53,15 @@ trait CatanSet[A <: InventoryItem, T, U <: CatanSet[A, T, U]] {
 
 object CatanSet {
 
-  implicit def toList[A <: InventoryItem, U <: CatanSet[A, Int, U]](set: CatanSet[A, Int, U]): Seq[A] = set.amountMap.toList.flatMap { case (a, amt) => (1 to amt).map(_ => a)}
-  implicit def fromMap[A <: InventoryItem, T: Numeric, U <: CatanSet[A, T, U]](invMap: Map[A, T])(implicit e: Empty[A, T, U]): U = invMap.foldLeft(e.empty){case (set, (a, amt)) => set.add(amt, a)}
-  implicit def fromList[A <: InventoryItem, U <: CatanSet[A, Int, U]](list: Seq[A])(implicit e: Empty[A, Int, U]): U = fromMap(list.map(_ -> 1).toMap)
+  def empty[A <: InventoryItem, T: Numeric] = CatanSet(Map.empty[A, T])
+
+  implicit def toList[A <: InventoryItem](set: CatanSet[A, Int]): Seq[A] = set.amountMap.toList.flatMap { case (a, amt) => (1 to amt).map(_ => a)}
+  implicit def fromMap[A <: InventoryItem, T: Numeric](invMap: Map[A, T]): CatanSet[A, T] = {
+    val numeric = implicitly[Numeric[T]]
+    CatanSet(invMap.filter{ case(_, t) => numeric.gt(t, numeric.zero) })
+  }
+  implicit def fromList[A <: InventoryItem](list: Seq[A]): CatanSet[A, Int] = fromMap(list.groupBy(f => f).view.mapValues(_.length).toMap)
+  implicit def sum[A <: InventoryItem, T: Numeric](sets: Seq[CatanSet[A, T]]): CatanSet[A, T] = sets.foldLeft(empty[A, T]){case (x, y) => x.add(y) }
+
 }
 
-trait Empty[A <: InventoryItem, T, U <: CatanSet[A, T, U]] {
-  def empty(): U
-}

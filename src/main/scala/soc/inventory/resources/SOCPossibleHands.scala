@@ -1,14 +1,16 @@
 package soc.inventory.resources
 
-import CatanResourceSet._
+import ResourceSet._
 import soc.inventory.Resource
 
 import scala.annotation.tailrec
 
-case class PossibleHands(hands: Seq[Map[Int, (Resources, Int)]]) {
+case class PossibleHands(hands: Seq[(Int, Map[Int, Resources])]) {
 
-  lazy val handsForPlayers: Map[Int, Seq[(Resources, Int)]] = hands.flatMap(_.keys).distinct.map {
-    playerId => playerId -> hands.map(_ (playerId))
+  lazy val handsForPlayers: Map[Int, Seq[(Resources, Int)]] = hands.flatMap(_._2.keys).distinct.map { playerId =>
+    playerId -> hands.map { case(m, map) =>
+      if (map.get(playerId).isEmpty) println(hands.mkString("\n"))
+      (map(playerId), m)}
   }.toMap
 
   lazy val probableHands: Map[Int, ProbableResourceSet] = handsForPlayers.map { case (playerId, allResSets) =>
@@ -22,48 +24,40 @@ case class PossibleHands(hands: Seq[Map[Int, (Resources, Int)]]) {
     }.toMap
     val knownMap: Map[Resource, Int] = resMap.view.mapValues(_._1).toMap
     val unknownMap: Map[Resource, Double] = resMap.view.mapValues(_._2).toMap
-    val knownSet: Resources = CatanResourceSet.fromMap(knownMap)
-    val unknownSet: ResourceSet[Double] = CatanResourceSet.fromMap(unknownMap)
+    val knownSet: Resources = ResourceSet(knownMap)
+    val unknownSet: ResourceSet[Double] = ResourceSet(unknownMap)
     playerId -> ProbableResourceSet(knownSet, unknownSet)
   }
 
   def playerGainCards(player: Int, set: Resources): PossibleHands = copy {
-    hands.headOption.fold(copy(Seq(Map(player -> (CatanResourceSet.empty, 1))))) {
-      case hand if !hand.contains(player) => copy(hands.map(_ + (player -> (CatanResourceSet.empty[Int], 1))))
+    val ifEmpty = copy(Seq((1, Map(player -> ResourceSet.empty))))
+    hands.headOption.fold(ifEmpty) {
+      case (_, hand) if !hand.contains(player) => copy(hands.map { case (mult, playerHands) => (mult, playerHands + (player -> ResourceSet.empty[Int])) })
       case _ => copy()
-    }.hands.map { hand =>
-      hand.map {
-        case (`player`, (resources, mult)) => player -> (resources.add(set), mult)
-        case (p, rm) => p -> rm
-      }
-    }
+    }.hands.map { case (mult, hand) => (mult, hand.map {
+      case (`player`, resources) => player -> (resources.add(set))
+      case (p, rm) => p -> rm
+    })}
   }
 
   def playerLoseCards(player: Int, set: Resources): PossibleHands = copy {
-    hands.filter(_.get(player).fold(false)(_._1.contains(set))).map {
-      _.map {
-        case (`player`, (resources, mult)) => player -> (resources.subtract(set), mult)
-        case (p, rm) => p -> rm
-      }
-    }
+    hands.filter {case (_, pr) => pr.get(player).fold(false)(_.contains(set))}.map { case (mult, pr) => (mult, pr.map {
+      case (`player`, resources) => player -> resources.subtract(set)
+      case (p, rm) => p -> rm
+    })}
   }
 
   def stealUnknownCards(robber: Int, victim: Int): PossibleHands = copy {
-    hands.flatMap { hand =>
-      Resource.list.filter(set => hand.get(victim).fold(false)(_._1.contains(set))).flatMap { res =>
-        val set = CatanResourceSet.fromList(res)
-        val amount = hand(victim)._1.getAmount(res)
-        PossibleHands(Seq(hand)).playerLoseCards(victim, set).playerGainCards(robber, set).hands.map {
-          _.map[Int, (Resources, Int)] {
-            case (`robber`, (resources, mult)) => robber -> (resources, mult * amount)
-            case (`victim`, (resources, mult)) => victim -> (resources, mult * amount)
-            case (p, rm) => p -> rm
-          }
+    hands.flatMap { case (mult, handSet) =>
+      handSet.get(victim).fold(copy().hands) { resSet =>
+        resSet.getTypes.flatMap { res =>
+          val set = ResourceSet(res)
+          val amount = resSet.getAmount(res)
+          PossibleHands(Seq((mult, handSet))).playerLoseCards(victim, set).playerGainCards(robber, set).hands.map { case (m, pr) => (m * amount, pr)}
         }
       }
-    }.groupBy(f => f).view.mapValues(_.length).toSeq.map {
-      case (m, 1) => m
-      case (m, l) => m.view.mapValues { case (set, mult) => (set, mult * l)}.toMap
+    }.groupBy { case (_, f) => f }.toSeq.map {
+      case (playerResources, playerResourcesWithMult) => (playerResourcesWithMult.map(_._1).sum, playerResources)
     }
   }
 

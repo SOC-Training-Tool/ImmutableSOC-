@@ -75,42 +75,42 @@ case class PlayerStateHelper [T <: Inventory[T]] protected (val players: Map[Int
   def playMonopoly(id: Int, turn: Int): PlayerStateHelper[T] = playDevelopmentCard(id, turn, Monopoly)
   def playYearOfPlenty(id: Int, turn: Int): PlayerStateHelper[T] = playDevelopmentCard(id, turn, YearOfPlenty)
   def playRoadBuilder(id: Int, turn: Int): PlayerStateHelper[T] = playDevelopmentCard(id, turn, RoadBuilder)
+  def playPointCard(id: Int, turn: Int): PlayerStateHelper[T] = playDevelopmentCard(id, turn, CatanPoint)
 
   def updateLongestRoad: PlayerStateHelper[T] = {
-    val longestRoad: Option[PlayerState[T]] = players.values.find(_.roadPoints >= 2)
-    val newLongestRoad = players.values.filter(p => p.roadLength > longestRoad.fold(4)(_.roadLength)).headOption.map(_.position)
-    copy (
-      (longestRoad.map(_.position), newLongestRoad) match {
-        case (_, None) => players
-        case (None, Some(has)) =>  players.map {
-          case (`has`, ps) => has -> ps.gainLongestRoad
-          case (id, ps) => id -> ps
-        }
-        case (Some(had), Some(has)) => players.map {
-          case (`had`, ps) => had -> ps.loseLongestRoad
-          case (`has`, ps) => has -> ps.gainLongestRoad
-          case (id, ps) => id -> ps
-        }
-      }
+    updateSpecialPoints(
+      _.roadPoints,
+      _.roadLength,
+      _.gainLongestRoad,
+      _.loseLongestRoad,
+      gameRules.longestRoad
     )
   }
 
   def updateLargestArmy: PlayerStateHelper[T] = {
     import soc.inventory.developmentCard.DevelopmentCardSet._
-    val largestArmy: Option[PlayerState[T]] = players.values.find(_.armyPoints >= 2)
-    val newLargestArmy = players.values.filter{ p =>
-      p.inventory.playedDevCards.getAmount(Knight) > largestArmy.fold(2)(_.inventory.playedDevCards.getAmount(Knight))
-    }.headOption.map(_.position)
+    updateSpecialPoints(
+      _.armyPoints,
+      _.inventory.playedDevCards.getAmount(Knight),
+      _.gainLargestArmy,
+      _.loseLargestArmy,
+      gameRules.largetsArmy
+    )
+  }
+
+  private def updateSpecialPoints(findLargest: PlayerState[T] => Int, getAmount: PlayerState[T] => Int, gain: PlayerState[T] => PlayerState[T], lose: PlayerState[T] => PlayerState[T], pointThreshold: Int): PlayerStateHelper[T] = {
+    val largest: Option[PlayerState[T]] = players.values.find(findLargest(_) >= 2)
+    val newLargest = players.values.filter(p => getAmount(p) > largest.fold(pointThreshold - 1)(getAmount(_))).headOption.map(_.position)
     copy (
-      (largestArmy.map(_.position), newLargestArmy) match {
+      (largest.map(_.position), newLargest) match {
         case (_, None) => players
         case (None, Some(has)) =>  players.map {
-          case (`has`, ps) => has -> ps.gainLargestArmy
+          case (`has`, ps) => has -> gain(ps)
           case (id, ps) => id -> ps
         }
         case (Some(had), Some(has)) => players.map {
-          case (`had`, ps) => had -> ps.loseLargestArmy
-          case (`has`, ps) => has -> ps.gainLargestArmy
+          case (`had`, ps) => had -> lose(ps)
+          case (`has`, ps) => has -> gain(ps)
           case (id, ps) => id -> ps
         }
       }

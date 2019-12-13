@@ -2,7 +2,7 @@ package soc.moves
 
 import soc.board.{Edge, Vertex}
 import soc.core.Roll
-import soc.inventory.resources.CatanResourceSet.Resources
+import soc.inventory.resources.ResourceSet.Resources
 import soc.inventory.{DevelopmentCard, Resource}
 
 case class RobPlayer(player: Int, res: Option[Resource])
@@ -77,4 +77,5 @@ trait TradeResponse extends CatanTradeMove
     val move = MonopolyMove(cardsLost.head._2.getTypes.head)
   }
   case class RoadBuilderMove(road1: Edge, road2: Option[Edge]) extends PerfectInfoMove
+  case object RevealPoint extends PerfectInfoMove
   //case object PointMove extends soc.moves.CatanPlayCardMove[]

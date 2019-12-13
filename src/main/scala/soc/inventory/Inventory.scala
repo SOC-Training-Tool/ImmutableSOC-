@@ -4,7 +4,7 @@ import Inventory.{PublicInfo, PerfectInfo, ProbableInfo}
 import soc.inventory.developmentCard._
 import soc.inventory.developmentCard.DevelopmentCardSet._
 import soc.inventory.resources._
-import soc.inventory.resources.CatanResourceSet.Resources
+import soc.inventory.resources.ResourceSet.Resources
 
 trait Inventory[T <: Inventory[T]] { self: T =>
 
@@ -33,7 +33,7 @@ case object Inventory {
 
 
 case class PerfectInfoInventory(
-  resourceSet: Resources = CatanResourceSet.empty,
+  resourceSet: Resources = ResourceSet.empty,
   developmentCards: DevelopmentCardSpecificationSet = DevelopmentCardSpecificationSet()
 ) extends Inventory[PerfectInfo] {
 
@@ -118,40 +118,44 @@ case class PublicInfoInventory(
 
   override def toPublicInfo: PublicInfo = this
 
-  override val pointCountIfKnown: Option[Int] = None
+  override val pointCountIfKnown: Option[Int] = {
+    val points = playedDevCards.getAmount(CatanPoint)
+    if (points == 0) None else Some(points)
+
+  }
 
 }
 
 case class ProbableInfoInventory(
   probableResourceSet: ProbableResourceSet = ProbableResourceSet.empty,
-  playedDevCards: DevelopmentCardSpecificationSet = DevelopmentCardSpecificationSet(),
-  knownUnplayedDevCards: PlayedInventory=  DevelopmentCardSet.empty,
-  probableDevCards: DevelopmentCardSet[Double] = DevelopmentCardSet.empty
+  knownDevCards: DevelopmentCardSpecificationSet = DevelopmentCardSpecificationSet(),
+  probableDevCards: DevelopmentCardSet[Double] = DevelopmentCardSet.empty[Double]
 ) extends Inventory[ProbableInfo]  {
 
   type UpdateRes = ProbableResourceSet
-  type UpdateDev = (DevelopmentCardSpecificationSet, PlayedInventory, DevelopmentCardSet[Double])
+  type UpdateDev = (DevelopmentCardSpecificationSet, DevelopmentCardSet[Double])
 
-  override val numUnplayedDevCards: Int = probableDevCards.getTotal.toInt + knownUnplayedDevCards.getTotal
+  override val playedDevCards: DevelopmentCardSpecificationSet = knownDevCards.filterPlayed
+
+  override val numUnplayedDevCards: Int = probableDevCards.getTotal.toInt + knownDevCards.filterUnPlayed.getTotal
   override val numCards: Int = probableResourceSet.getTotal
 
   override def canSpend(resSet: Resources): Boolean = probableResourceSet.mightContain(resSet)
-  override def canPlayCard(card: DevelopmentCard, turn: Int): Boolean = !playedDevCards.playedCardOnTurn(turn) && (knownUnplayedDevCards.contains(card) || probableDevCards.contains(card))
+  override def canPlayCard(card: DevelopmentCard, turn: Int): Boolean = knownDevCards.canPlayCardOnTurn(card, turn) || probableDevCards.contains(card)
 
   override def updateResources(position: Int, probableSet: ProbableResourceSet): ProbableInfoInventory = copy(probableResourceSet = probableSet)
 
   override def endTurn: ProbableInfoInventory = copy()
 
-  override def updateDevelopmentCard(turn: Int, position: Int, update: (DevelopmentCardSpecificationSet, PlayedInventory, DevelopmentCardSet[Double])): ProbableInfoInventory = {
-    val (played, known, probable) = update
+  override def updateDevelopmentCard(turn: Int, position: Int, update: (DevelopmentCardSpecificationSet, DevelopmentCardSet[Double])): ProbableInfoInventory = {
+    val (known, probable) = update
     copy(
-      playedDevCards = played,
-      knownUnplayedDevCards = known,
+      knownDevCards = known,
       probableDevCards = probable
     )
   }
 
   override def toPublicInfo: PublicInfo = PublicInfoInventory(playedDevCards, numCards, numUnplayedDevCards)
 
-  override val pointCountIfKnown: Option[Int] = Some(knownUnplayedDevCards.getAmount(CatanPoint))
+  override val pointCountIfKnown: Option[Int] = Some(knownDevCards.getAmount(CatanPoint))
 }

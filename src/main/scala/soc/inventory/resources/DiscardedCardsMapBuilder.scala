@@ -1,6 +1,6 @@
 package soc.inventory.resources
 
-import CatanResourceSet.Resources
+import ResourceSet.Resources
 
 case class DiscardedCardsMapBuilder private(playersToDiscard: Seq[Int], cardsToDiscard: Map[Int, Resources] = Map.empty) {
 

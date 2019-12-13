@@ -2,9 +2,9 @@ package soc.moves
 
 import soc.board._
 import soc.inventory.Inventory.{PerfectInfo, PublicInfo}
-import soc.inventory.resources.CatanResourceSet
+import soc.inventory.resources.ResourceSet
 import soc.inventory._
-import soc.inventory.resources.CatanResourceSet._
+import soc.inventory.resources.ResourceSet._
 import soc.state.{GamePhase, GameState}
 
 object PossibleMoves {
@@ -89,7 +89,7 @@ object PossibleMoves {
     val board = state.board
     val currPlayer = state.currentPlayer
 
-    def canSpend(res: Resource, amount: Int): Boolean = inventory.canSpend(CatanResourceSet.fromMap(Map(res -> 2)))
+    def canSpend(res: Resource, amount: Int): Boolean = inventory.canSpend(ResourceSet(Map(res -> 2)))
 
     val ports = board.getPortsForPlayer(currPlayer)
 
@@ -97,23 +97,23 @@ object PossibleMoves {
     Resource.list.flatMap { res =>
       val otherRes: Seq[Resource with Port] = Resource.list.filterNot(_ == res)
       if ( ports.contains(res) && canSpend(res, 2)) {
-        val give = CatanResourceSet().add(2, res)
+        val give = ResourceSet().add(2, res)
         otherRes.map{ r =>
-          val get = CatanResourceSet().add(1, r)
+          val get = ResourceSet().add(1, r)
           PortTradeMove(give,  get)
         }
       }
       else if (_3to1 && canSpend(res, 3)) {
-        val give =  CatanResourceSet().add(3, res)
+        val give =  ResourceSet().add(3, res)
         otherRes.map{ r =>
-          val get = CatanResourceSet().add(1, r)
+          val get = ResourceSet().add(1, r)
           PortTradeMove(give,  get)
         }
       }
       else if(canSpend(res, 4)) {
-        val give =  CatanResourceSet().add(4, res)
+        val give =  ResourceSet().add(4, res)
         otherRes.map{ r =>
-          val get = CatanResourceSet().add(1, r)
+          val get = ResourceSet().add(1, r)
           PortTradeMove(give,  get)
         }
       }
@@ -137,8 +137,8 @@ object PossibleMoves {
 
   def getPossibleDiscards[T <: Inventory[T]](inventory: T, playerPosition: Int)(numToDiscard: Int = inventory.numCards / 2)(implicit resourceExtractor: ResourceSetExtractor[T]): Iterator[DiscardResourcesMove] = {
     resourceExtractor.extractResources(inventory).iterator.flatMap { resourceSet =>
-      CatanSet.toList[Resource, Resources](resourceSet).combinations(numToDiscard).map { resList =>
-        DiscardResourcesMove(CatanSet.fromList[Resource, CatanResourceSet[Int]](resList.toList))
+      CatanSet.toList(resourceSet).combinations(numToDiscard).map { resList =>
+        DiscardResourcesMove(ResourceSet(resList.toList:_*))
       }
     }
   }
