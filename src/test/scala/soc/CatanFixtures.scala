@@ -69,7 +69,6 @@ object CatanFixtures {
     EndTurnMove,
     // 0
     RollResult(Roll(9)),
-    BuyDevelopmentCardResult(Seq(0), Some(CatanPoint)),
     BuildRoadMove(Edge(Vertex(17), Vertex(40))),
     EndTurnMove,
     // 1
@@ -102,7 +101,7 @@ object CatanFixtures {
     // 3
     RollResult(Roll(10)),
     KnightResult(MoveRobberAndStealResult(Seq(1, 3), 13, Some(RobPlayer(1, Some(Brick))))),
-    BuildSettlementMove(Vertex(1)),
+    moves2.BuildSettlementMove(Vertex(1)),
     EndTurnMove,
     // 0
     RollResult(Roll(10)),
@@ -134,17 +133,17 @@ object CatanFixtures {
     EndTurnMove,
     // 0
     RollResult(Roll(10)),
-    BuildSettlementMove(Vertex(17)),
+    moves2.BuildSettlementMove(Vertex(17)),
     EndTurnMove,
     // 1
     RollResult(Roll(11)),
-    BuildSettlementMove(Vertex(50)),
+    moves2.BuildSettlementMove(Vertex(50)),
     BuyDevelopmentCardResult(Seq(1), Some(Knight)),
     EndTurnMove,
     // 2
     RollResult(Roll(5)),
     PortTradeMove(ResourceSet(wh = 4), ResourceSet(wo = 1)),
-    BuildSettlementMove(Vertex(24)),
+    moves2.BuildSettlementMove(Vertex(24)),
     PortTradeMove(ResourceSet(sh = 2), ResourceSet(wo = 1)),
     BuildRoadMove(Edge(Vertex(29), Vertex(30))),
     EndTurnMove,
@@ -160,7 +159,7 @@ object CatanFixtures {
     RollResult(Roll(9)),
     BuildRoadMove(Edge(Vertex(7), Vertex(8))),
     PortTradeMove(ResourceSet(br = 4), ResourceSet(wo = 1)),
-    BuildSettlementMove(Vertex(8)),
+    moves2.BuildSettlementMove(Vertex(8)),
     EndTurnMove,
     // 2
     RollResult(Roll(5)),
@@ -201,7 +200,7 @@ object CatanFixtures {
     EndTurnMove,
     // 0
     RollResult(Roll(7)),
-    DiscardResourcesResult(Map(1 -> ResourceSet(or = 3, br = 1))),
+    DiscardResourcesResult(Map(1 -> ResourceSet(or = 3, sh = 1))),
     MoveRobberAndStealResult(Seq(0,1), 3, Some(RobPlayer(1, Some(Ore)))),
     BuyDevelopmentCardResult(Seq(0), Some(Knight)),
     EndTurnMove,
@@ -211,7 +210,7 @@ object CatanFixtures {
     // 2
     RollResult(Roll(8)),
     PortTradeMove(ResourceSet(wh = 4), ResourceSet(wo = 1)),
-    BuildSettlementMove(Vertex(29)),
+    moves2.BuildSettlementMove(Vertex(29)),
     EndTurnMove,
     // 3
     RollResult(Roll(5)),
@@ -222,7 +221,7 @@ object CatanFixtures {
     RollResult(Roll(10)),
     RoadBuilderMove(Edge(Vertex(20), Vertex(21)), Some(Edge(Vertex(39), Vertex(40)))),
     PortTradeMove(ResourceSet(br = 2), ResourceSet(wo = 1)),
-    BuildSettlementMove(Vertex(20)),
+    moves2.BuildSettlementMove(Vertex(20)),
     EndTurnMove,
     // 1
     RollResult(Roll(5)),
@@ -246,7 +245,7 @@ object CatanFixtures {
     RollResult(Roll(3)),
     KnightResult(MoveRobberAndStealResult(Seq(0, 3), 0, Some(RobPlayer(3, Some(Wood))))),
     PortTradeMove(ResourceSet(wo = 2), ResourceSet(wh = 1)),
-    BuildSettlementMove(Vertex(39)),
+    moves2.BuildSettlementMove(Vertex(39)),
     EndTurnMove,
     // 1
     RollResult(Roll(10)),
@@ -274,9 +273,6 @@ object CatanFixtures {
     RevealPoint,
     EndTurnMove,
     //3
-    RevealPoint,
-    EndTurnMove,
-    //0
     RevealPoint,
     EndTurnMove,
 

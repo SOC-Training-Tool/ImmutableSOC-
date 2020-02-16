@@ -1,10 +1,10 @@
 package soc.inventory
 
-import Inventory.{PublicInfo, PerfectInfo, ProbableInfo}
+import Inventory.{PerfectInfo, ProbableInfo, PublicInfo}
 import soc.inventory.developmentCard._
 import soc.inventory.developmentCard.DevelopmentCardSet._
 import soc.inventory.resources._
-import soc.inventory.resources.ResourceSet.Resources
+import soc.inventory.resources.ResourceSet.{ResourceSet, Resources}
 
 trait Inventory[T <: Inventory[T]] { self: T =>
 
@@ -128,11 +128,12 @@ case class PublicInfoInventory(
 
 case class ProbableInfoInventory(
   probableResourceSet: ProbableResourceSet = ProbableResourceSet.empty,
+  possibleResourceSets: Seq[Resources] = Nil,
   knownDevCards: DevelopmentCardSpecificationSet = DevelopmentCardSpecificationSet(),
   probableDevCards: DevelopmentCardSet[Double] = DevelopmentCardSet.empty[Double]
 ) extends Inventory[ProbableInfo]  {
 
-  type UpdateRes = ProbableResourceSet
+  type UpdateRes = (ProbableResourceSet, Seq[Resources])
   type UpdateDev = (DevelopmentCardSpecificationSet, DevelopmentCardSet[Double])
 
   override val playedDevCards: DevelopmentCardSpecificationSet = knownDevCards.filterPlayed
@@ -143,7 +144,7 @@ case class ProbableInfoInventory(
   override def canSpend(resSet: Resources): Boolean = probableResourceSet.mightContain(resSet)
   override def canPlayCard(card: DevelopmentCard, turn: Int): Boolean = knownDevCards.canPlayCardOnTurn(card, turn) || probableDevCards.contains(card)
 
-  override def updateResources(position: Int, probableSet: ProbableResourceSet): ProbableInfoInventory = copy(probableResourceSet = probableSet)
+  override def updateResources(position: Int, update: UpdateRes): ProbableInfoInventory = copy(probableResourceSet = update._1, possibleResourceSets = update._2)
 
   override def endTurn: ProbableInfoInventory = copy()
 

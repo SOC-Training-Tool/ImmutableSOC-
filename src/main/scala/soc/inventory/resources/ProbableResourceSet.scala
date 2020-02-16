@@ -66,7 +66,7 @@ class ProbableResourceSet(val known: ResourceSet[Int], val unknown: ResourceSet[
 
   val getUnknownTotal: Int =  unknown.getTotal
 
-  lazy override val getTotal: Int = getKnownTotal + getUnknownTotal
+  override val getTotal: Int = getKnownTotal + getUnknownTotal
 
   /**
     * @return true if this contains at least the resources in other

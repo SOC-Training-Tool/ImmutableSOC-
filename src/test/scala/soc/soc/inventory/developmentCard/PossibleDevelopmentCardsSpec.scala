@@ -7,6 +7,8 @@ import soc.inventory.developmentCard.PossibleDevelopmentCards
 
 class PossibleDevelopmentCardsSpec extends FunSpec with Matchers {
 
+  import soc.board.BaseCatanBoard._
+
   implicit val gameRules = GameRules.default
   val possibleDevCards = PossibleDevelopmentCards()
 

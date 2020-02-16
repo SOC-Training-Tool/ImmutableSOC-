@@ -9,7 +9,7 @@ case class PossibleDevCardsHands(
   numUnknownDevCards: Int = 0,
   unknownDevCards: DevelopmentCardSet[Double] = DevelopmentCardSet.empty[Double])
 
-case class PossibleDevelopmentCards(cards: Map[Int, PossibleDevCardsHands] = Map.empty)(implicit gameRules: GameRules) {
+case class PossibleDevelopmentCards(cards: Map[Int, PossibleDevCardsHands] = Map.empty)(implicit gameRules: GameRules[_]) {
 
   def apply(player: Int): PossibleDevCardsHands = cards.getOrElse(player, PossibleDevCardsHands())
 
@@ -30,21 +30,25 @@ case class PossibleDevelopmentCards(cards: Map[Int, PossibleDevCardsHands] = Map
     }
   )
 
-  def buyKnownCard(player: Int, turn: Int, card: DevelopmentCard): PossibleDevelopmentCards =
-    cards.get(player).fold(copy(cards + (player -> PossibleDevCardsHands())))(_ => this).copy(
-      cards.map {
+  def buyKnownCard(player: Int, turn: Int, card: DevelopmentCard): PossibleDevelopmentCards = {
+    val insert = cards.get(player).fold(copy(cards + (player -> PossibleDevCardsHands())))(_ => this)
+    insert.copy(
+      cards = insert.cards.map {
         case (`player`, hand) => player -> hand.copy(knownDevCards = hand.knownDevCards.buyCard(turn, card))
         case (p, hand) => p -> hand
       }
     ).updateUnknownDevCards
+  }
 
-  def buyUnknownCard(player: Int): PossibleDevelopmentCards =
-    cards.get(player).fold(copy(cards + (player -> PossibleDevCardsHands())))(_ => this).copy(
-      cards.map {
+  def buyUnknownCard(player: Int): PossibleDevelopmentCards = {
+    val insert = cards.get(player).fold(copy(cards + (player -> PossibleDevCardsHands())))(_ => this)
+    insert.copy(
+      cards = insert.cards.map {
         case (`player`, hand) => player -> hand.copy(numUnknownDevCards = hand.numUnknownDevCards + 1)
         case (p, hand) => p -> hand
       }
     ).updateUnknownDevCards
+  }
 
   def playCard(turn: Int, player: Int, card: DevelopmentCard): PossibleDevelopmentCards = {
     val insert = cards.get(player).fold(copy(cards + (player -> PossibleDevCardsHands())))(_ => this)
@@ -63,5 +67,5 @@ case class PossibleDevelopmentCards(cards: Map[Int, PossibleDevCardsHands] = Map
 }
 
 object PossibleDevelopmentCards {
-  def empty(implicit gameRules: GameRules) = PossibleDevelopmentCards()
+  def empty(implicit gameRules: GameRules[_]) = PossibleDevelopmentCards()
 }

@@ -2,6 +2,7 @@ package soc.moves
 
 import org.scalatest.{FunSpec, Matchers}
 import soc.CatanFixtures
+import soc.board.BaseBoardConfiguration
 import soc.core.GameRules
 import soc.inventory.Inventory.PerfectInfo
 import soc.state.GameState
@@ -9,10 +10,11 @@ import soc.state.GameState
 class CatanPossibleMovesSpec extends FunSpec with Matchers {
 
   import soc.inventory.InventoryHelper._
+  import soc.board.BaseCatanBoard._
   val board = CatanFixtures.baseBoard
   val players = Seq(("Player0", 0), ("Player1", 1), ("Player2", 2), ("Player3", 3))
   implicit  val rules = GameRules.default
-  val gameState = GameState[PerfectInfo](board, players.map(_._2), rules)
+  val gameState = GameState[PerfectInfo, BaseBoardConfiguration](board, players.map(_._2), rules)
 
   val moveResults = CatanFixtures.testMoveResults
 

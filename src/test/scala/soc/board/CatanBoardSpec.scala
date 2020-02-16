@@ -5,7 +5,6 @@ import soc.inventory.{_}
 import org.scalatest.{FunSpec, Matchers}
 import soc.CatanFixtures._
 
-
 class CatanBoardSpec extends FunSpec with Matchers {
 
   describe("canBuildSettlement") {

@@ -9,17 +9,15 @@ import util.MapReverse
 import scala.util.Random
 
 sealed trait Hex {
-  val getResourceAndNumber: Option[(Resource, Roll)]
   val getResource: Option[Resource]
   val getNumber: Option[Roll]
+  lazy val getResourceAndNumber: Option[(Resource, Roll)] = getResource zip getNumber
 }
 case class ResourceHex(resource: Resource, number: Roll) extends Hex {
-  override val getResourceAndNumber: Option[(Resource, Roll)] = Some((resource, number))
   override val getResource: Option[Resource] = Some(resource)
   override val getNumber: Option[Roll] = Some(number)
 }
 case object Desert extends Hex {
-  override val getResourceAndNumber: Option[(Resource, Roll)] = None
   override val getResource: Option[Resource] = None
   override val getNumber: Option[Roll] = None
 }
@@ -31,8 +29,9 @@ case class BoardHex(
   vertices: List[Vertex]) {
 }
 
-case class Vertex(node: Int)
-case class Edge(v1: Vertex, v2: Vertex) {
+sealed trait BuildingLocation
+case class Vertex(node: Int) extends BuildingLocation
+case class Edge(v1: Vertex, v2: Vertex) extends BuildingLocation {
 
   def contains(v: Vertex): Boolean = v == v1 || v == v2
 
@@ -48,17 +47,18 @@ case class Edge(v1: Vertex, v2: Vertex) {
   override def hashCode: Int = (v1.node * v1.node) + (v2.node * v2.node)
 }
 
-case class CatanBoard private(
-  hexesWithNodes: Seq[BoardHex],
-  vertices: Seq[Vertex],
-  edges: Seq[Edge],
-  edgesFromVertex: Map[Vertex, Seq[Edge]],
-  neighboringVertices: Map[Vertex, Seq[Vertex]],
-  adjacentHexes: Map[Vertex, Seq[BoardHex]],
-  portMap: Map[Edge, Port],
+case class CatanBoard[T <: BoardConfiguration] private(
+  val hexesWithNodes: Seq[BoardHex],
+  val vertices: Seq[Vertex],
+  val edges: Seq[Edge],
+  val edgesFromVertex: Map[Vertex, Seq[Edge]],
+  val neighboringVertices: Map[Vertex, Seq[Vertex]],
+  val adjacentHexes: Map[Vertex, Seq[BoardHex]],
+  val portMap: Map[Edge, Port],
   robberHex: Int,
   verticesBuildingMap: Map[Vertex, VertexBuilding] = Map.empty,
   edgesBuildingMap: Map[Edge, EdgeBuilding] = Map.empty,
+  buildingMap: Map[BuildingLocation, CatanBuilding] = Map.empty,
   roadLengths: Map[Int, Int] = Map.empty
 ) {
 
@@ -73,7 +73,7 @@ case class CatanBoard private(
       } else true)
   }
 
-  def buildSettlement(vertex: Vertex, playerId: Int): CatanBoard = {
+  def buildSettlement(vertex: Vertex, playerId: Int): CatanBoard[T] = {
     val settlement = Settlement(playerId)
     val vertexMap = verticesBuildingMap + (vertex -> settlement)
     copy(verticesBuildingMap = vertexMap)
@@ -87,7 +87,7 @@ case class CatanBoard private(
     }
   }
 
-  def buildCity(vertex: Vertex, playerId: Int): CatanBoard = {
+  def buildCity(vertex: Vertex, playerId: Int): CatanBoard[T] = {
     val city = City(playerId)
     val vertexMap = (verticesBuildingMap - vertex) + (vertex -> city)
     copy(verticesBuildingMap = vertexMap)
@@ -107,7 +107,7 @@ case class CatanBoard private(
     edges.contains(edge) && !edgesBuildingMap.contains(edge) && (canBuildRoadOffVertex(edge.v1) || canBuildRoadOffVertex(edge.v2))
   }
 
-  def buildRoad(edge: Edge, playerId: Int): CatanBoard = {
+  def buildRoad(edge: Edge, playerId: Int): CatanBoard[T] = {
     val road = Road(playerId)
     val edgeMap = edgesBuildingMap + (edge -> road)
     val roadLen = Seq(roadLengths.getOrElse(playerId, 0), calcLongestRoadLength(playerId, edge)).max
@@ -118,19 +118,19 @@ case class CatanBoard private(
   }
 
   def getSettlementVerticesForPlayer(id: Int): Seq[Vertex] = verticesBuildingMap.toSeq.filter {
-    case (v, Settlement(`id`)) => true
+    case (_, Settlement(`id`)) => true
     case _ => false
   }.map(_._1)
   def getNumSettlementsForPlayer(id: Int): Int = getSettlementVerticesForPlayer(id).length
 
   def getNumCityVerticesForPlayer(id: Int): Seq[Vertex] = verticesBuildingMap.toSeq.filter {
-    case (v, City(`id`)) => true
+    case (_, City(`id`)) => true
     case _ => false
   }.map(_._1)
   def getNumCitiesForPlayer(id: Int): Int = getNumCityVerticesForPlayer(id).length
 
   def getRoadEdgesForPlayer(id: Int): Seq[Edge] = edgesBuildingMap.toSeq.filter {
-    case (e, Road(`id`)) => true
+    case (_, Road(`id`)) => true
     case _ => false
   }.map(_._1)
   def getNumRoadsForPlayer(id: Int): Int = getRoadEdgesForPlayer(id).length
@@ -154,9 +154,9 @@ case class CatanBoard private(
   }
 
   def playersOnHex(node: Int): Seq[Int] = {
-    hexesWithNodes.find(_.node == node).get.vertices.flatMap { v =>
+    hexesWithNodes.find(_.node == node).fold(List.empty[Int])(_.vertices.flatMap { v =>
       verticesBuildingMap.get(v).map(_.playerId)
-    }.distinct
+    }.distinct)
   }
 
   def longestRoadLength(playerId: Int): Int = roadLengths.getOrElse(playerId, 0)
@@ -188,7 +188,7 @@ case class CatanBoard private(
     roads.map(r => calcLongestRoadLengthRecur(playerId, List((r.v1, r.v2)), List(r))).max
   }
 
-  def updateRoadLengths: CatanBoard = {
+  def updateRoadLengths: CatanBoard[T] = {
     val players = edgesBuildingMap.view.values.map(_.playerId).toSeq.distinct
     copy(roadLengths = players.map(p => p -> calcLongestRoadLength(p)).toMap)
   }
@@ -267,24 +267,24 @@ case class CatanBoard private(
 
 object CatanBoard {
 
-  def apply(
+  def apply[T <: BoardConfiguration](
     vertexMap: Map[Int, List[Vertex]],
     portMap: Map[Edge, Port],
     hexes: List[Hex]
-  ): CatanBoard = {
+  ): CatanBoard[T] = {
     val hexesWithNodes: Seq[BoardHex] = hexes.zipWithIndex.map { case (hex: Hex, node: Int) =>
       BoardHex(node, hex, vertexMap(node))
     }
     CatanBoard(hexesWithNodes, portMap)
   }
 
-  def apply(
+  def apply[T <: BoardConfiguration](
     hexes: Seq[BoardHex],
     portMap: Map[Edge, Port],
     robber: Int,
     vertexBuildings: Map[Vertex, VertexBuilding],
     edgeBuildings: Map[Edge, EdgeBuilding]
-  ): CatanBoard = {
+  ): CatanBoard[T] = {
     CatanBoard(hexes, portMap).copy(
       verticesBuildingMap = vertexBuildings,
       edgesBuildingMap = edgeBuildings,
@@ -292,10 +292,10 @@ object CatanBoard {
     ).updateRoadLengths
   }
 
-  def apply(
+  def apply[T <: BoardConfiguration](
     hexesWithNodes: Seq[BoardHex],
     portMap: Map[Edge, Port]
-  ): CatanBoard = {
+  ): CatanBoard[T] = {
 
     val vertices: Seq[Vertex] = hexesWithNodes.flatMap(_.vertices).distinct
     val edges: Seq[Edge] = hexesWithNodes.flatMap { hex =>
@@ -327,13 +327,10 @@ object CatanBoard {
     CatanBoard(hexesWithNodes, vertices, edges, edgesFromVertex, neighboringVertices, adjacentHexes, portMap, robber)
   }
 
-  def checkValid(board: CatanBoard): Boolean = {
+  def checkValid[T <: BoardConfiguration](board: CatanBoard[T])(implicit boardRules: BoardRules[T]): Boolean = {
     board.adjacentHexes.forall { case (_, hexes) =>
-      hexes.groupBy(_.hex.getNumber).forall {
-        case (Some(Roll(6)), neighbors) if neighbors.length >= 2 => false
-        case (Some(Roll(8)), neighbors) if neighbors.length >= 2 => false
-        case _ => true
-      }
+      val rolls = hexes.map(_.hex.getNumber).flatten
+      rolls.filterNot(boardRules.cannotNeighbor.contains).length < 2
     }
   }
 }
@@ -341,8 +338,8 @@ object CatanBoard {
 trait BoardConfiguration
 
 trait BoardGenerator[T <: BoardConfiguration] {
-  def apply(config: T): CatanBoard
-
+  def apply(config: T): CatanBoard[T]
+  def unapply(board: CatanBoard[T]): T
   def randomBoard(implicit rand: Random): T
 }
 
@@ -351,5 +348,17 @@ trait BoardMapping[T <: BoardConfiguration] {
   val vertexMapping: Map[Int, String]
   lazy val reverseHexMapping = MapReverse.reverseMap(hexMapping)
   lazy val reverseVertexMapping = MapReverse.reverseMap(vertexMapping)
+}
+
+trait BoardRules[T <: BoardConfiguration] {
+  val numHex: Int
+  val numPorts: Int
+  val resourceCounts: Map[Resource, Int]
+  val portCounts: Map[Port, Int]
+  val validRolls: Seq[Roll]
+  val cannotNeighbor: Seq[Roll]
+
+  val robberRoll: Int
+  val diceProbability: Int
 
 }

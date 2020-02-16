@@ -16,7 +16,6 @@ case class PlayerState[T <: Inventory[T]](
   settlements: List[Vertex] = Nil,
   cities: List[Vertex] = Nil,
   roads: List[Edge] = Nil,
-  dots: ResourceSet[Int] = ResourceSet.empty,
   roadLength: Int = 0) {
 
   val settlementPoints = settlements.length
@@ -25,33 +24,23 @@ case class PlayerState[T <: Inventory[T]](
   val dCardPoints = inventory.pointCountIfKnown.getOrElse(0)
   val points = boardPoints + armyPoints + roadPoints + dCardPoints
 
-  def canBuildSettlement(implicit gameRules: GameRules) = settlements.length < gameRules.numSettlements
+  def canBuildSettlement(implicit gameRules: GameRules[_]) = settlements.length < gameRules.numSettlements
 
-  def buildSettlement(board: CatanBoard, vertex: Vertex): PlayerState[T] = copy(
+  def buildSettlement(board: CatanBoard[_], vertex: Vertex): PlayerState[T] = copy(
     settlements = this.settlements ::: List(vertex),
-    ports = board.getPort(vertex).fold(this.ports)(this.ports + _),
-    dots = board.adjacentHexes(vertex).flatMap { node =>
-      node.hex.getResourceAndNumber.map {
-        case (resource, roll) => roll.dots -> resource
-      }
-    }.foldLeft(this.dots) { case (set, (amt, res)) => set.add(amt, res) }
+    ports = board.getPort(vertex).fold(this.ports)(this.ports + _)
   )
 
-  def canBuildCity(implicit gameRules: GameRules) = cities.length < gameRules.numCities
+  def canBuildCity(implicit gameRules: GameRules[_]) = cities.length < gameRules.numCities
 
-  def buildCity(board: CatanBoard, vertex: Vertex): PlayerState[T] = copy(
+  def buildCity(board: CatanBoard[_], vertex: Vertex): PlayerState[T] = copy(
     settlements = this.settlements.filterNot(_ == vertex),
-    cities = this.cities ::: List(vertex),
-    dots = board.adjacentHexes(vertex).flatMap { node =>
-      node.hex.getResourceAndNumber.map {
-        case (resource, roll) => roll.dots -> resource
-      }
-    }.foldLeft(this.dots) { case (set, (amt, res)) => set.add(amt, res) }
+    cities = this.cities ::: List(vertex)
   )
 
-  def canBuildRoad(implicit gameRules: GameRules) = roads.length < gameRules.numRoads
+  def canBuildRoad(implicit gameRules: GameRules[_]) = roads.length < gameRules.numRoads
 
-  def buildRoad(board: CatanBoard, edge: Edge): PlayerState[T] = copy(
+  def buildRoad(board: CatanBoard[_], edge: Edge): PlayerState[T] = copy(
     roads = this.roads ::: List(edge),
     roadLength = board.buildRoad(edge, position).roadLengths.get(position).getOrElse(0)
   )

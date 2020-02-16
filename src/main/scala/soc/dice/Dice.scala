@@ -2,6 +2,7 @@ package soc.dice
 
 trait Dice {
 
-  def getRoll: (Int, Int)
+  val sides: List[Int]
+  def getRoll: Int
 
 }

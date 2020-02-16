@@ -2,10 +2,10 @@ package soc.inventory
 
 case class CatanSet[A <: InventoryItem, T] protected(amountMap: Map[A, T])(implicit num: Numeric[T]) {
 
-  lazy val getTotal = num.toInt(amountMap.values.sum)
-  lazy val getTypes: Seq[A] = amountMap.keys.toSeq
-  lazy val getTypeCount = amountMap.values.count(num.toDouble(_) > 0)
-  lazy val isEmpty: Boolean = getTotal == 0
+  val getTotal = num.toInt(amountMap.values.sum)
+  val getTypes: Seq[A] = amountMap.keys.toSeq
+  val getTypeCount = amountMap.values.count(num.toDouble(_) > 0)
+  val isEmpty: Boolean = getTotal == 0
 
   def copy(amountMap: Map[A, T] = amountMap): CatanSet[A, T] = CatanSet.fromMap(amountMap)
 
@@ -58,7 +58,7 @@ object CatanSet {
   implicit def toList[A <: InventoryItem](set: CatanSet[A, Int]): Seq[A] = set.amountMap.toList.flatMap { case (a, amt) => (1 to amt).map(_ => a)}
   implicit def fromMap[A <: InventoryItem, T: Numeric](invMap: Map[A, T]): CatanSet[A, T] = {
     val numeric = implicitly[Numeric[T]]
-    CatanSet(invMap.filter{ case(_, t) => numeric.gt(t, numeric.zero) })
+    CatanSet(invMap.filter{ case(_, t) => numeric.gt(t, numeric.zero) }.toMap)
   }
   implicit def fromList[A <: InventoryItem](list: Seq[A]): CatanSet[A, Int] = fromMap(list.groupBy(f => f).view.mapValues(_.length).toMap)
   implicit def sum[A <: InventoryItem, T: Numeric](sets: Seq[CatanSet[A, T]]): CatanSet[A, T] = sets.foldLeft(empty[A, T]){case (x, y) => x.add(y) }

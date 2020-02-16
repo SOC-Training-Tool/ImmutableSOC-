@@ -46,11 +46,13 @@ case class DevelopmentCardSpecificationSet(cards: List[DevelopmentCardSpecificat
     val s = cards.filter(f).sortBy(_.turnPurchased)
     copy(s.headOption.fold(List(DevelopmentCardSpecification(card, None, Some(turn))))(_.copy(turnPlayed = Some(turn)) :: s.tail) ::: cards.filterNot(f))
   }
+
   def playedCardOnTurn(turn: Int) = cards.find(_.turnPlayed.fold(false)(_ == turn)).isDefined
   def canPlayCardOnTurn(card: DevelopmentCard, turn: Int): Boolean = {
-    !playedCardOnTurn(turn) &&
-      filterUnPlayed.contains(card) &&
-      filterUnPlayed.cards.exists{c => c.`type` == card && c.turnPurchased.fold(false)(_ != turn) }
+    filterUnPlayed.contains(card) &&
+      (card == CatanPoint ||
+        (!playedCardOnTurn(turn) &&
+          filterUnPlayed.cards.exists { c => c.`type` == card && c.turnPurchased.fold(false)(_ != turn) }))
   }
 
   lazy val filterUnPlayed = copy(cards.filter(_.turnPlayed.isEmpty))
