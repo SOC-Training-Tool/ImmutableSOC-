@@ -1,15 +1,11 @@
 package soc.moves2
 
 import soc.board.BoardConfiguration
-import soc.inventory.Inventory
-import soc.inventory.Inventory.PerfectInfo
-import soc.state.{GamePhase, GameState}
+import soc.inventory.{CatanSet, InventoryHelper, PerfectInfoInventory, Resource}
 
-case class EndTurnMove() extends SOCMove[EndTurnMove]
-case object EndTurnAction extends GameAction[EndTurnMove] {
-  override def getAllPossibleMovesForState[PERSPECTIVE <: Inventory[PERSPECTIVE], BOARD <: BoardConfiguration](state: GameState[PerfectInfo, BOARD], inv: PERSPECTIVE, position: Int): Seq[SOCMove[EndTurnMove]] = {
-    if (state.phase == GamePhase.BuyTradeOrEnd) {
-      List(EndTurnMove())
-    } else Nil
-  }
+case class EndTurnMove(player: Int) extends PerfectInformationSOCMove[EndTurnMove]
+case class EndTurnAction[BOARD <: BoardConfiguration, II <: Resource, STATE[P] <: SOCState[BOARD, P, II, STATE[P]]]() extends PerfectInformationMoveGameAction[BOARD, II, STATE, EndTurnMove] {
+  override def canDoAction[PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo]](state: STATE[PERSPECTIVE], inv: PerfectInfo, position: Int): Boolean = true
+  override def getAllMoves[PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo]](state: STATE[PERSPECTIVE], inv: PerfectInfo, position: Int): Seq[EndTurnMove] = List(EndTurnMove(position))
 }
+

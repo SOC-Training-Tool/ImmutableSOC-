@@ -54,7 +54,7 @@ object CatanPossibleMoveResults {
       val maxRoll: Int = boardRules.validRolls.map(_.number).max
       move match {
         case perfectInfoMove: PerfectInfoMove => SimpleProbState(state(perfectInfoMove).state, Seq(perfectInfoMove))
-        case RollDiceMove => WeightedProbState {
+        case RollDiceMove() => WeightedProbState {
           (minRoll to maxRoll).iterator.map[StateProbState[I, B]] {
             case `robberRoll` =>
               val roll = Roll(robberRoll)

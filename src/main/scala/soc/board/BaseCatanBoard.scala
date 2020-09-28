@@ -9,7 +9,8 @@ case class BaseBoardConfiguration(hexes: List[Hex], ports: List[Port]) extends S
 
 object BaseCatanBoard extends SimpleBoardLayout[BaseBoardConfiguration] with BoardMapping[BaseBoardConfiguration] {
 
-  type BaseBoard = CatanBoard[BaseBoardConfiguration]
+  type BASE = BaseBoardConfiguration
+  type BaseBoard = CatanBoard[BASE]
 
   override def apply(hexes: List[Hex], ports: List[Port]): BaseBoardConfiguration = BaseBoardConfiguration(hexes, ports)
 

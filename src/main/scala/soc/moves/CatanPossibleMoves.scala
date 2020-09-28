@@ -6,7 +6,8 @@ import soc.inventory.resources.ResourceSet
 import soc.inventory._
 import soc.inventory.resources.ResourceSet._
 import soc.moves2
-import soc.moves2.RollDiceMove
+import soc.moves2.{RollDiceMove, build}
+import soc.moves2.build.BuildSettlementMove
 import soc.state.{GamePhase, GameState}
 
 object PossibleMoves {
@@ -53,13 +54,13 @@ object PossibleMoves {
     }.toList
   }
 
-  def getSettlements[T <: Inventory[T]](state: GameState[PublicInfo, _], inventory: T): List[moves2.BuildSettlementMove] = {
+  def getSettlements[T <: Inventory[T]](state: GameState[PublicInfo, _], inventory: T): List[BuildSettlementMove] = {
     val board: CatanBoard[_] = state.board
     val currPlayer = state.currentPlayer
     val gameRules = state.rules
 
     if (board.getNumSettlementsForPlayer(currPlayer) < gameRules.numSettlements && inventory.canSpend(Settlement.cost)) {
-      board.getPossibleSettlements(currPlayer, false).toList.map(v => moves2.BuildSettlementMove(v))
+      board.getPossibleSettlements(currPlayer, false).toList.map(v => build.BuildSettlementMove(v))
     } else Nil
   }
 

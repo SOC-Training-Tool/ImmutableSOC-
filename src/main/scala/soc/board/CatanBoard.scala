@@ -56,11 +56,16 @@ case class CatanBoard[T <: BoardConfiguration] private(
   val adjacentHexes: Map[Vertex, Seq[BoardHex]],
   val portMap: Map[Edge, Port],
   robberHex: Int,
-  verticesBuildingMap: Map[Vertex, VertexBuilding] = Map.empty,
-  edgesBuildingMap: Map[Edge, EdgeBuilding] = Map.empty,
   buildingMap: Map[BuildingLocation, CatanBuilding] = Map.empty,
   roadLengths: Map[Int, Int] = Map.empty
 ) {
+
+  val verticesBuildingMap: Map[Vertex, VertexBuilding] = buildingMap.collect {
+    case(v: Vertex, b: VertexBuilding) => v -> b
+  }
+  val edgesBuildingMap: Map[Edge, EdgeBuilding] = buildingMap.collect {
+    case (e: Edge, b: EdgeBuilding) => e -> b
+  }
 
   def canBuildSettlement(vertex: Vertex, playerId: Int, initialPlacement: Boolean = false): Boolean = {
     vertices.contains(vertex) &&
@@ -75,8 +80,8 @@ case class CatanBoard[T <: BoardConfiguration] private(
 
   def buildSettlement(vertex: Vertex, playerId: Int): CatanBoard[T] = {
     val settlement = Settlement(playerId)
-    val vertexMap = verticesBuildingMap + (vertex -> settlement)
-    copy(verticesBuildingMap = vertexMap)
+    val vertexMap = buildingMap + (vertex -> settlement)
+    copy(buildingMap = vertexMap)
   }
 
   def canBuildCity(vertex: Vertex, playerId: Int): Boolean = {
@@ -89,8 +94,8 @@ case class CatanBoard[T <: BoardConfiguration] private(
 
   def buildCity(vertex: Vertex, playerId: Int): CatanBoard[T] = {
     val city = City(playerId)
-    val vertexMap = (verticesBuildingMap - vertex) + (vertex -> city)
-    copy(verticesBuildingMap = vertexMap)
+    val vertexMap = (buildingMap - vertex) + (vertex -> city)
+    copy(buildingMap = vertexMap)
   }
 
   def canBuildRoad(edge: Edge, playerId: Int): Boolean = {
@@ -105,16 +110,6 @@ case class CatanBoard[T <: BoardConfiguration] private(
     }
 
     edges.contains(edge) && !edgesBuildingMap.contains(edge) && (canBuildRoadOffVertex(edge.v1) || canBuildRoadOffVertex(edge.v2))
-  }
-
-  def buildRoad(edge: Edge, playerId: Int): CatanBoard[T] = {
-    val road = Road(playerId)
-    val edgeMap = edgesBuildingMap + (edge -> road)
-    val roadLen = Seq(roadLengths.getOrElse(playerId, 0), calcLongestRoadLength(playerId, edge)).max
-    copy(
-      edgesBuildingMap = edgeMap,
-      roadLengths = roadLengths + (playerId -> roadLen)
-    )
   }
 
   def getSettlementVerticesForPlayer(id: Int): Seq[Vertex] = verticesBuildingMap.toSeq.filter {
@@ -175,94 +170,7 @@ case class CatanBoard[T <: BoardConfiguration] private(
     }.groupBy(_._1).view.mapValues(_.map(_._2).foldLeft(ResourceSet.empty[Int])(_.add(1, _)))
   }.toMap
 
-  def calcLongestRoadLength(playerId: Int): Int = {
-    val roads = edgesBuildingMap.toSeq.flatMap {
-      case (edge, building) if building.playerId == playerId => Seq(edge)
-      case _ => Nil
-    }
-    calcLongestRoadLength(playerId, roads: _*)
-  }
 
-
-  def calcLongestRoadLength(playerId: Int, roads: Edge*): Int = {
-    roads.map(r => calcLongestRoadLengthRecur(playerId, List((r.v1, r.v2)), List(r))).max
-  }
-
-  def updateRoadLengths: CatanBoard[T] = {
-    val players = edgesBuildingMap.view.values.map(_.playerId).toSeq.distinct
-    copy(roadLengths = players.map(p => p -> calcLongestRoadLength(p)).toMap)
-  }
-
-  private def calcLongestRoadLengthRecur(playerId: Int, stack: List[(Vertex, Vertex)], visited: List[Edge] = Nil): Int = {
-    if (stack.isEmpty) visited.length
-    else {
-      val (v1, v2): (Vertex, Vertex) = stack.head
-      if (v1 == v2) {
-        return Math.max(visited.length, calcLongestRoadLengthRecur(playerId, stack.tail, visited))
-      }
-
-      val fromV1 = if (verticesBuildingMap.get(v1).fold(true)(_.playerId == playerId)) {
-        neighboringVertices(v1).filterNot(v => visited.contains(Edge(v1, v))).filter(v => edgesBuildingMap.get(Edge(v1, v)).fold(false)(_.playerId == playerId)).toList
-      } else Nil
-      val fromV2 = if (verticesBuildingMap.get(v2).fold(true)(_.playerId == playerId)) {
-        neighboringVertices(v2).filterNot(v => visited.contains(Edge(v2, v))).filter(v => edgesBuildingMap.get(Edge(v2, v)).fold(false)(_.playerId == playerId)).toList
-      } else Nil
-
-      (fromV1, fromV2) match {
-        // see road scenario1
-        case (Nil, Nil) =>
-          Math.max(visited.length, calcLongestRoadLengthRecur(playerId, stack.tail, visited))
-
-        // see road scenario2
-        case (Nil, r :: Nil) =>
-          calcLongestRoadLengthRecur(playerId, (v1, r) :: stack.tail, Edge(v2, r) :: visited)
-
-        case (Nil, r1 :: r2 :: Nil) =>
-          Seq(
-            calcLongestRoadLengthRecur(playerId, (v1, r1) :: stack.tail, Edge(v2, r1) :: visited),
-            calcLongestRoadLengthRecur(playerId, (v1, r2) :: stack.tail, Edge(v2, r2) :: visited)
-          ).max
-
-        case (l :: Nil, Nil) =>
-          calcLongestRoadLengthRecur(playerId, (l, v2) :: stack.tail, Edge(l, v1) :: visited)
-
-        case (l :: Nil, r :: Nil) =>
-          calcLongestRoadLengthRecur(playerId, (l, r) :: stack.tail, Edge(r, v2) :: Edge(l, v1) :: visited)
-
-        case (l :: Nil, r1 :: r2 :: Nil) =>
-          Seq(
-            calcLongestRoadLengthRecur(playerId, (l, r1) :: stack.tail, Edge(r1, v2) :: Edge(l, v1) :: visited),
-            calcLongestRoadLengthRecur(playerId, (l, r2) :: stack.tail, Edge(r2, v2) :: Edge(l, v1) :: visited)
-          ).max
-        // see road scenario4
-
-        case (l1 :: l2 :: Nil, Nil) =>
-          Seq(
-            calcLongestRoadLengthRecur(playerId, (l1, v2) :: stack.tail, Edge(l1, v1) :: visited),
-            calcLongestRoadLengthRecur(playerId, (l2, v2) :: stack.tail, Edge(l2, v1) :: visited)
-          ).max
-
-        case (l1 :: l2 :: Nil, r :: Nil) =>
-          Seq(
-            calcLongestRoadLengthRecur(playerId, (l1, r) :: stack.tail, Edge(l1, v1) :: Edge(r, v2) :: visited),
-            calcLongestRoadLengthRecur(playerId, (l2, r) :: stack.tail, Edge(l2, v1) :: Edge(r, v2) :: visited)
-          ).max
-
-        case (l1 :: l2 :: Nil, r1 :: r2 :: Nil) =>
-          Seq(
-            calcLongestRoadLengthRecur(playerId, (l1, r1) :: stack.tail, Edge(l1, v1) :: Edge(r1, v2) :: visited),
-            calcLongestRoadLengthRecur(playerId, (l2, r2) :: stack.tail, Edge(l2, v1) :: Edge(r2, v2) :: visited),
-            calcLongestRoadLengthRecur(playerId, (l1, r2) :: stack.tail, Edge(l1, v1) :: Edge(r2, v2) :: visited),
-            calcLongestRoadLengthRecur(playerId, (l2, r1) :: stack.tail, Edge(l2, v1) :: Edge(r1, v2) :: visited)
-          ).max
-        case _ =>
-          println(v1, v2)
-          println(fromV1, fromV2)
-          println(neighboringVertices(v1), neighboringVertices(v2))
-          throw new Exception("")
-      }
-    }
-  }
 }
 
 object CatanBoard {
@@ -282,14 +190,12 @@ object CatanBoard {
     hexes: Seq[BoardHex],
     portMap: Map[Edge, Port],
     robber: Int,
-    vertexBuildings: Map[Vertex, VertexBuilding],
-    edgeBuildings: Map[Edge, EdgeBuilding]
+    buildingMap: Map[BuildingLocation, CatanBuilding]
   ): CatanBoard[T] = {
     CatanBoard(hexes, portMap).copy(
-      verticesBuildingMap = vertexBuildings,
-      edgesBuildingMap = edgeBuildings,
+      buildingMap = buildingMap,
       robberHex = robber
-    ).updateRoadLengths
+    )
   }
 
   def apply[T <: BoardConfiguration](

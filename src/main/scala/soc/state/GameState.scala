@@ -9,6 +9,7 @@ import soc.inventory.resources._
 import soc.moves.PossibleMoves.ResourceSetExtractor
 import soc.moves._
 import soc.moves2
+import soc.moves2.build
 import soc.state.GamePhase.GameOver
 import soc.state.player._
 
@@ -18,7 +19,7 @@ case class GameState[T <: Inventory[T], B <: BoardConfiguration](
   resourceBank: ResourceSet[Int],
   developmentCardsLeft: Int,
   currentPlayer: Int,
-  phase: GamePhase,
+  phase: GamePhase.Value,
   turn: Int,
   implicit val rules: GameRules[B],
   expectingDiscard: List[Int])
@@ -36,13 +37,13 @@ case class GameState[T <: Inventory[T], B <: BoardConfiguration](
     expectingDiscard
   )
 
-  private def transition (
+   def transition (
     board: CatanBoard[B] = board,
     players: PlayerStateHelper[T] = players,
     resourceBank: ResourceSet[Int] = resourceBank,
     developmentCardsLeft: Int = developmentCardsLeft,
     currentPlayer: Int = currentPlayer,
-    phase: GamePhase = phase,
+    phase: GamePhase.Value = phase,
     turn: Int = turn,
     rules: GameRules[B] = rules,
     expectingDiscard: List[Int] = expectingDiscard,
@@ -153,7 +154,7 @@ case class GameState[T <: Inventory[T], B <: BoardConfiguration](
     )
   }
 
-  def buildSettlement(result: moves2.BuildSettlementMove): StateTransition[T, B] = buildSettlement(result.vertex)
+  def buildSettlement(result: build.BuildSettlementMove): StateTransition[T, B] = buildSettlement(result.vertex)
   def buildSettlement(vertex: Vertex, buy: Boolean = true): StateTransition[T, B] = {
 
     val newBoard = board.buildSettlement(vertex, currentPlayer)
@@ -267,15 +268,6 @@ case class GameState[T <: Inventory[T], B <: BoardConfiguration](
     )
   }
 
-  def endTurn: StateTransition[T, B] = {
-    val nextPlayer = players.nextPlayer(currentPlayer)
-    transition(
-      phase = GamePhase.Roll,
-      currentPlayer = nextPlayer,
-      turn = turn + 1,
-      players = players.endTurn(currentPlayer)
-    )
-  }
 
   def canDoMove(playerId: Int, move: CatanMove)(implicit resourceExtractor: ResourceSetExtractor[T]): Boolean = {
     val inventory = players.getPlayer(playerId).inventory
@@ -292,7 +284,7 @@ case class GameState[T <: Inventory[T], B <: BoardConfiguration](
     case r: MoveRobberAndStealResult => moveRobberAndSteal(r)
     case r: BuyDevelopmentCardResult => buyDevelopmentCard(r)
     case r: BuildRoadMove => buildRoad(r)
-    case r: moves2.BuildSettlementMove => buildSettlement(r)
+    case r: build.BuildSettlementMove => buildSettlement(r)
     case r: BuildCityMove => buildCity(r)
     case r: PortTradeMove => portTrade(r)
     case r: KnightResult => playKnight(r)

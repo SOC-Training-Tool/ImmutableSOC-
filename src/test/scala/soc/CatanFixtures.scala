@@ -101,7 +101,7 @@ object CatanFixtures {
     // 3
     RollResult(Roll(10)),
     KnightResult(MoveRobberAndStealResult(Seq(1, 3), 13, Some(RobPlayer(1, Some(Brick))))),
-    moves2.BuildSettlementMove(Vertex(1)),
+    build.BuildSettlementMove(Vertex(1)),
     EndTurnMove,
     // 0
     RollResult(Roll(10)),
@@ -133,17 +133,17 @@ object CatanFixtures {
     EndTurnMove,
     // 0
     RollResult(Roll(10)),
-    moves2.BuildSettlementMove(Vertex(17)),
+    build.BuildSettlementMove(Vertex(17)),
     EndTurnMove,
     // 1
     RollResult(Roll(11)),
-    moves2.BuildSettlementMove(Vertex(50)),
+    build.BuildSettlementMove(Vertex(50)),
     BuyDevelopmentCardResult(Seq(1), Some(Knight)),
     EndTurnMove,
     // 2
     RollResult(Roll(5)),
     PortTradeMove(ResourceSet(wh = 4), ResourceSet(wo = 1)),
-    moves2.BuildSettlementMove(Vertex(24)),
+    build.BuildSettlementMove(Vertex(24)),
     PortTradeMove(ResourceSet(sh = 2), ResourceSet(wo = 1)),
     BuildRoadMove(Edge(Vertex(29), Vertex(30))),
     EndTurnMove,
@@ -159,7 +159,7 @@ object CatanFixtures {
     RollResult(Roll(9)),
     BuildRoadMove(Edge(Vertex(7), Vertex(8))),
     PortTradeMove(ResourceSet(br = 4), ResourceSet(wo = 1)),
-    moves2.BuildSettlementMove(Vertex(8)),
+    build.BuildSettlementMove(Vertex(8)),
     EndTurnMove,
     // 2
     RollResult(Roll(5)),
@@ -210,7 +210,7 @@ object CatanFixtures {
     // 2
     RollResult(Roll(8)),
     PortTradeMove(ResourceSet(wh = 4), ResourceSet(wo = 1)),
-    moves2.BuildSettlementMove(Vertex(29)),
+    build.BuildSettlementMove(Vertex(29)),
     EndTurnMove,
     // 3
     RollResult(Roll(5)),
@@ -221,7 +221,7 @@ object CatanFixtures {
     RollResult(Roll(10)),
     RoadBuilderMove(Edge(Vertex(20), Vertex(21)), Some(Edge(Vertex(39), Vertex(40)))),
     PortTradeMove(ResourceSet(br = 2), ResourceSet(wo = 1)),
-    moves2.BuildSettlementMove(Vertex(20)),
+    build.BuildSettlementMove(Vertex(20)),
     EndTurnMove,
     // 1
     RollResult(Roll(5)),
@@ -245,7 +245,7 @@ object CatanFixtures {
     RollResult(Roll(3)),
     KnightResult(MoveRobberAndStealResult(Seq(0, 3), 0, Some(RobPlayer(3, Some(Wood))))),
     PortTradeMove(ResourceSet(wo = 2), ResourceSet(wh = 1)),
-    moves2.BuildSettlementMove(Vertex(39)),
+    build.BuildSettlementMove(Vertex(39)),
     EndTurnMove,
     // 1
     RollResult(Roll(10)),

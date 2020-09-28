@@ -3,10 +3,10 @@ package soc.moves
 import soc.board.{Edge, Vertex}
 import soc.core.Roll
 import soc.inventory.resources.ResourceSet.Resources
-import soc.inventory.{DevelopmentCard, Resource}
+import soc.inventory.{DevelopmentCard, InventoryItem, Resource}
 import soc.moves2.RollDiceMove
 
-case class RobPlayer(player: Int, res: Option[Resource])
+case class RobPlayer[II <: InventoryItem](player: Int, res: Option[II])
 
 sealed trait CatanMove
 sealed trait MoveResult {

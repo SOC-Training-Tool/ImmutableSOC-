@@ -48,7 +48,7 @@ trait SimpleBoardLayout[B <: SimpleCatanBoardConfiguration] extends BoardGenerat
   }
 
   @tailrec
-  override final def randomBoard(implicit rand: Random): B = {
+  override final def randomBoard(implicit rand: Random = new Random()): B = {
     val resources = resourceCounts.toSeq.flatMap {
       case (resource, amt) => (1 to amt).map(_ => resource)
     }
