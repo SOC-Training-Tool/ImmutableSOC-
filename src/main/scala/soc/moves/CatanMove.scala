@@ -35,7 +35,7 @@ trait TradeResponse extends CatanTradeMove
   case class DiscardResourcesResult(resourceLost: Map[Int, Resources]) extends MoveResult  { val move = DiscardResourcesMove(resourceLost.head._2) }
 
   case class MoveRobberAndStealMove(node: Int, playerStole: Option[Int]) extends CatanMove
-  case class MoveRobberAndStealResult(override val viewableBy: Seq[Int], robberLocation: Int, steal: Option[RobPlayer]) extends MoveResult {
+  case class MoveRobberAndStealResult(override val viewableBy: Seq[Int], robberLocation: Int, steal: Option[RobPlayer[Resource]]) extends MoveResult {
     val move = MoveRobberAndStealMove(robberLocation, steal.map(_.player))
     override def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, MoveResult] = playerIds.map {
       case p if viewableBy.contains(p) => p -> this

@@ -8,10 +8,13 @@ import soc.moves2.developmentcard.SimpleDevInventoryHelper.SimpleInventory
 
 
 object DevelopmentCardInventory {
-  type PerfectInfoDevInv[II <: InventoryItem] = SimpleDevInventoryHelper[II, PerfectInfoDevelopmentCardInventory[II]]
-  type PublicInfoDevInv[II <: InventoryItem] = SimpleDevInventoryHelper[II, PublicInfoDevelopmentCardInventory[II]]
+  type PerfectInfoDevInvHelper[II <: InventoryItem] = SimpleDevInventoryHelper[II, PerfectInfoDevInv[II]]
+  type PublicInfoDevInvHelper[II <: InventoryItem] = SimpleDevInventoryHelper[II, PublicInfoDevInv[II]]
 
-  implicit def publicInfoDevInvFactory[II <: InventoryItem](implicit publicInfoFactory: InventoryHelperFactory[II, PublicInfoInv[II]]): InventoryHelperFactory[II, PublicInfoDevInv[II]] = { players =>
+  type PerfectInfoDevInv[II <: InventoryItem] = PerfectInfoDevelopmentCardInventory[II]
+  type PublicInfoDevInv[II <: InventoryItem] = PublicInfoDevelopmentCardInventory[II]
+
+  implicit def publicInfoDevInvFactory[II <: InventoryItem](implicit publicInfoFactory: InventoryHelperFactory[II, PublicInfoInv[II]]): InventoryHelperFactory[II, PublicInfoDevInvHelper[II]] = { players =>
     SimpleDevInventoryHelper[II, PublicInfoDevelopmentCardInventory[II]](
       SimpleInventoryHelper[II, PublicInfoDevelopmentCardInventory[II], PublicInfoDevelopmentCardInventory[II]](
         publicInfoFactory.create(players).playerInventories.map { case(p, i) =>
@@ -21,7 +24,7 @@ object DevelopmentCardInventory {
     )
   }
 
-  implicit def perfectInfoDevInvFactory[II <: InventoryItem](implicit perfectInfoFactory: InventoryHelperFactory[II, PerfectInfoInv[II]]): InventoryHelperFactory[II, PerfectInfoDevInv[II]] = { players =>
+  implicit def perfectInfoDevInvFactory[II <: InventoryItem](implicit perfectInfoFactory: InventoryHelperFactory[II, PerfectInfoInv[II]]): InventoryHelperFactory[II, PerfectInfoDevInvHelper[II]] = { players =>
     SimpleDevInventoryHelper[II, PerfectInfoDevelopmentCardInventory[II]](
       SimpleInventoryHelper[II, PublicInfoDevelopmentCardInventory[II], PerfectInfoDevelopmentCardInventory[II]](
         perfectInfoFactory.create(players).playerInventories.map { case (p, i) =>
@@ -36,13 +39,15 @@ object DevelopmentCardInventory {
 trait DevelopmentCardInventoryHelper[II <: InventoryItem, DI <: DevelopmentCardInventoryHelper[II, DI]] extends InventoryHelper[II, DI] { self: DI =>
   override type INV <: DevelopmentCardInventory[II, INV]
 
+  def canPlayCard(player: Int, card: DevelopmentCard, turn: Int) = playerInventories.get(player).fold[Boolean](false)(_.canPlayCard(card, turn))
+
   def buyDevelopmentCard(position: Int, turn: Int, card: Option[DevelopmentCard]): DI
 
   def playDevelopmentCard(position: Int, turn: Int, card: DevelopmentCard): DI
 }
 
 object SimpleDevInventoryHelper {
-  type SimpleInventory[II <: InventoryItem, I <: Inventory[II, I]] = DevelopmentCardInventory[II, I] {
+  type SimpleInventory[II <: InventoryItem, I <: DevelopmentCardInventory[II, I]] = DevelopmentCardInventory[II, I] {
     type UpdateRes = List[SOCTransactions[II]]
     type UpdateDev = DevCardTransaction
     type PUBLIC = PublicInfoDevelopmentCardInventory[II]

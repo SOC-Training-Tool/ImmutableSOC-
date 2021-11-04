@@ -1,79 +1,196 @@
 package soc.gametype
 
-import soc.board.BaseCatanBoard.BASE
-import soc.board.{BoardConfiguration, BoardGenerator, CatanBoard, Edge, Vertex}
+import shapeless.ops.hlist.{SelectAll, Selector}
+import shapeless.{::, HList, HNil}
+import soc.board.BoardConfiguration
 import soc.inventory._
+import soc.inventory.resources.ResourceSet
+import soc.inventory.resources.ResourceSet.Resources
+import soc.moves2.SOCState.SOCState
 import soc.moves2._
 import soc.moves2.build._
-import soc.moves2.developmentcard.{DevelopmentCardSOCState, LargestArmySOCState, SOCDevelopmentCardsInDeck, SOCLargestArmyPlayer, SOCNumKnights}
-
-case class BaseGameSOCState[BOARD <: BoardConfiguration, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE]](
-  board: CatanBoard[BOARD],
-  bank: CatanSet[Resource, Int] = CatanSet.empty,
-  inventoryHelper: PERSPECTIVE,
-  settlements: SOCSettlementMap,
-  cities: SOCCityMap,
-  roads: SOCRoadMap,
-  playerPoints: SOCPlayerPointsMap,
-  turn: SOCTurn,
-  robberLocation: SOCRobberLocation,
-  developmentCardsLeft: SOCDevelopmentCardsInDeck,
-  longestRoadPlayer: SOCLongestRoadPlayer,
-  roadLengths: SOCRoadLengths,
-  largestArmyPlayer: SOCLargestArmyPlayer,
-  numKnights: SOCNumKnights
-) extends SettlementSOCState[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]]
-    with CitySOCState[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]]
-    with RoadSOCState[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]]
-    with InitialPlacementSOCState[BOARD, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]]
-    with RobberSOCState[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]]
-    with PortSOCState[BOARD, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]]
-    with RollDiceSOCState[BOARD, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]]
-    with DevelopmentCardSOCState[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]]
-    with LongestRoadSOCState[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]]
-    with LargestArmySOCState[BOARD, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]] {
-  override def updateSettlements(settlements: SOCSettlementMap): BaseGameSOCState[BOARD, PERSPECTIVE] = copy(settlements = settlements)
-  override def updateCities(cities: SOCCityMap): BaseGameSOCState[BOARD, PERSPECTIVE] = copy(cities = cities)
-  override def updateRoads(roads: SOCRoadMap): BaseGameSOCState[BOARD, PERSPECTIVE] = copy(roads = roads)
-  override def updateRobberLocation(v: SOCRobberLocation): BaseGameSOCState[BOARD, PERSPECTIVE] = copy(robberLocation = v)
-  override def updateInvHelper(inventoryHelper: PERSPECTIVE): BaseGameSOCState[BOARD, PERSPECTIVE] = copy(inventoryHelper = inventoryHelper)
-  override def updateBank(bank: CatanSet[Resource, Int]): BaseGameSOCState[BOARD, PERSPECTIVE] = copy(bank = bank)
-  override def incrementTurn: BaseGameSOCState[BOARD, PERSPECTIVE] = copy(turn = turn.copy(turn.t + 1))
-  override def updatePoints(playerPoints: SOCPlayerPointsMap): BaseGameSOCState[BOARD, PERSPECTIVE] = copy(playerPoints = playerPoints)
-  override def decrementNumDevelopmentCards: BaseGameSOCState[BOARD, PERSPECTIVE] = copy(developmentCardsLeft = developmentCardsLeft.copy(developmentCardsLeft.d - 1))
-  override def updateLongestRoadPlayer(player: SOCLongestRoadPlayer): BaseGameSOCState[BOARD, PERSPECTIVE] = copy(longestRoadPlayer = player)
-  override def updateRoadLengths(roadLengths: SOCRoadLengths): BaseGameSOCState[BOARD, PERSPECTIVE] = copy(roadLengths = roadLengths)
-  override def updateLargestArmyPlayer(player: SOCLargestArmyPlayer): BaseGameSOCState[BOARD, PERSPECTIVE] = copy(largestArmyPlayer = player)
-  override def updateNumKnights(numKnights: SOCNumKnights): BaseGameSOCState[BOARD, PERSPECTIVE] = copy(numKnights = numKnights)
-}
-
+import soc.moves2.developmentcard.DevelopmentCardInventory.PerfectInfoDevInv
+import soc.moves2.developmentcard._
 
 object BaseGame {
 
-  implicit val baseBoardRobberLocator: InitialRobberLocationLocator[BASE, BaseGameSOCState[BASE, _]] = { board =>
-    board.hexesWithNodes.find(_.hex.getNumber.isEmpty).get.node
+  implicit def baseRollOps[BOARD <: BoardConfiguration, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE], STATE <: HList](implicit boardOps: BoardOps[BOARD, Resource, PERSPECTIVE, STATE], dep: DependsOn[STATE, SOCCanRollDice :: SOCRobberLocation :: SOCState[BOARD, Resource, PERSPECTIVE]]) = new RollDiceOps[BOARD, Resource, PERSPECTIVE, STATE] {
+
+    import RollDiceSOCState._
+
+    implicit val rollOps = this
+
+    override def getVertexBuildingValue: PartialFunction[VertexBuilding, Int] = Map(Settlement -> 1, City -> 2)
+
+    override def onRoll(rollDiceResult: RollDiceResult, s: STATE)(f: STATE => STATE): STATE = {
+      f(s.distributeResources(s.getResourcesGainedOnRoll(rollDiceResult.roll.number)))
+    }
   }
 
-  implicit def baseGameFactory[BOARD <: BoardConfiguration, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE]](implicit robberLocator: InitialRobberLocationLocator[BOARD, BaseGameSOCState[BOARD, _]]): SOCStateFactory[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]] =
-    new SOCStateFactory[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]] {
-      override def create(boardConf: BOARD, initBank: CatanSet[Resource, Int], playerIds: Seq[Int])(implicit boardGenerator: BoardGenerator[BOARD], invHelperFactory: InventoryHelperFactory[Resource, PERSPECTIVE]): BaseGameSOCState[BOARD, PERSPECTIVE] = {
-        val board: CatanBoard[BOARD] = boardGenerator.apply(boardConf)
-        BaseGameSOCState(
-          board,
-          initBank,
-          invHelperFactory.create(playerIds.toList),
-          Map.empty,
-          Map.empty,
-          Map.empty,
-          Map.empty,
-          0,
-          robberLocator.getInitialRobberLocation(board),
-          25
-        )
-      }
+  type BASE_NEXT_MOVES[W[_ <: SOCMoveResult]] = W[BuildSettlementMove] :: W[BuildRoadMove] :: W[BuildCityMove] :: W[EndTurnMove] :: HNil // TODO add full list
+  implicit def baseRollNextMoves[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], W[_ <: SOCMoveResult], A <: HList, STATE <: HList](implicit ws: Selector[A, W[RollDiceResult]], sa: SelectAll[A, BASE_NEXT_MOVES[W]]): NextMove[BOARD, II, PERSPECTIVE, W, A, STATE, RollDiceResult] = (a: A) => {
+    // TODO implement robber
+    val func = (_: STATE, r: RollDiceResult) => Map(r.player -> sa.apply(a).toList)
+    ws.apply(a) -> func
+  }
+
+  implicit def applyRollDiceMoveResult[BOARD <: BoardConfiguration, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE], STATE <: HList](implicit boardOps: BoardOps[BOARD, Resource, PERSPECTIVE, STATE], dep: DependsOn[STATE, SOCCanRollDice :: SOCRobberLocation :: SOCState[BOARD, Resource, PERSPECTIVE]]) = new ApplyMoveResult[BOARD, Resource, PERSPECTIVE, RollDiceResult, STATE] {
+    override def apply(state: STATE, moveResult: RollDiceResult): STATE = {
+      import RollDiceSOCState._
+      state.rollDice(moveResult)
+    }
+  }
+
+  //  type BaseGameSOCState[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: DevelopmentCardInventoryHelper[II, PERSPECTIVE]] =
+  //    SOCSettlementMap :: SOCCityMap :: SOCRoadMap :: SOCRobberLocation :: SOCDevelopmentCardsInDeck ::
+  //      SOCLongestRoadPlayer :: SOCRoadLengths :: SOCLargestArmyPlayer :: SOCNumKnights ::
+  //      SOCPlayersToDiscard :: SOCCanRollDice :: SOCState[BOARD, II, PERSPECTIVE]
+
+  type BaseGameSOCState[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: DevelopmentCardInventoryHelper[II, PERSPECTIVE]] =
+    SOCSettlementMap :: SOCCityMap :: SOCRoadMap :: SOCLongestRoadPlayer :: SOCRoadLengths :: SOCCanRollDice :: SOCRobberLocation :: SOCState[BOARD, II, PERSPECTIVE]
+
+
+  type PlayDevelopmentCardMoves = PlayKnightMove :: PlayMonopolyMove :: PlayYearOfPlentyMove :: PlayRoadBuilderMove :: HNil
+  type RegularMoves = EndTurnMove :: BuildSettlementMove :: BuildCityMove :: BuildRoadMove :: PortTradeMove :: BuyDevelopmentCardMove :: PlayDevelopmentCardMoves
+
+  def builder[BOARD <: BoardConfiguration, PERSPECTIVE <: DevelopmentCardInventoryHelper[Resource, PERSPECTIVE]] = {
+
+    import CitySOCState._
+    import RoadSOCState._
+    import RollDiceMove._
+    import SettlementSOCState._
+
+    implicit val settlementCost = new Cost[Resource, BuildSettlementMove] {
+      override def getCost: Resources = ResourceSet(Wood, Brick, Wheat, Sheep)
+    }
+    implicit val cityCost = new Cost[Resource, BuildCityMove] {
+      override def getCost: Resources = ResourceSet(Ore, Ore, Ore, Wheat, Wheat)
+    }
+    implicit val roadCost = new Cost[Resource, BuildRoadMove] {
+      override def getCost: Resources = ResourceSet(Wood, Brick)
     }
 
+    SOCGame.build[BOARD, Resource, PERSPECTIVE, PerfectInfoDevInv[Resource], BaseGameSOCState[BOARD, Resource, PERSPECTIVE]] {
+      fact =>
+        import fact._
+
+        val builder = fact.apply[BuildSettlementMove :: BuildCityMove :: BuildRoadMove :: RollDiceResult :: EndTurnMove :: InitialPlacementMove :: HNil]
+        builder.build
+
+    }
+
+
+    //    implicit val boardOps = BoardOps.baseBoardOps[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, Resource, PERSPECTIVE]]
+    //    implicit val rollOps = baseRollOps[BOARD, PERSPECTIVE, BaseGameSOCState[BOARD, Resource, PERSPECTIVE]]
+    //
+    //    implicit val settlementCost = Cost[Resource, BuildSettlementMove](ResourceSet(Wood, Brick, Wheat, Sheep))
+    //
+    //    implicit val settlementNextMoves: GetPossibleActions[BuildSettlementMove, BaseGameSOCState[BOARD, Resource, PERSPECTIVE]]
+
+
+    //    SOCGame.builder[BaseGameSOCState[BOARD, Resource, PERSPECTIVE]]
+    //      .addMove[BuildSettlementMove](
+    //        ~>[RegularMoves].apply{ (state, move: BuildSettlementMove) =>
+    //          Some(state.buildSettlement(move, Some(CatanSet.empty)))}) // TODO add correct costs
+    //      .addMove[BuildCityMove](
+    //        ~>[RegularMoves].apply{ (state, move: BuildCityMove) =>
+    //          Some(state.buildCity(move, CatanSet.empty))})
+    //      .addMove[BuildRoadMove](
+    //        ~>[RegularMoves].apply{ (state, move: BuildRoadMove) =>
+    //          Some(state.buildRoad(move, Some(CatanSet.empty)))})
+    //      .addMove[PortTradeMove](
+    //        ~> [RegularMoves].apply { (state, move: PortTradeMove) => Some(state) /*.doPortTrade(move)*/})
+
+    //      .addTransition[PortTradeMove, RegularMoves] { case (state, move: PortTradeMove) => state /*.doPortTrade(move)*/}
+    //      .addTransition[BuyDevelopmentCard, RegularMoves] { case (state, move: BuyDevelopmentCardsMoveResult) => state.buyDevelopmentCard(move) }
+    //      .addTransition[PlayKnightMove, RollDiceMove :: HNil] {
+    //        case (state, move: PlayKnightMoveResult[Resource]) if !state.rolledDice =>
+    //          state.playDevelopmentCard(move)
+    //      }
+    //      .addTransition[EndTurnMove, RollDiceMove :: PlayDevelopmentCardMoves] { case (state, _) => state.incrementTurn/*.setRollDice(true)*/ }
+
+  }
+}
+
+
+//
+//  val state: BaseGameSOCState[BaseBoardConfiguration, Resource, PerfectInfoDevInv[Resource]] = null
+//  implicit val mod = SOCState.socStateModifier[BaseBoardConfiguration, Resource, PerfectInfoDevInv[Resource]]
+//
+//  implicit val publicMod = SOCState.socStateModifier[BaseBoardConfiguration, Resource, PublicInfoDevInv[Resource]]
+
+//  implicit def bankFactory[BOARD <: BoardConfiguration, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE]]: SOCStateFieldGenerator[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE], Resources] = {case (_, _) =>  ResourceSet.fullBank}
+//  implicit def robberLocation[BOARD <: BoardConfiguration, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE]]:  SOCStateFieldGenerator[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE], SOCRobberLocation] = { case(board, _) =>
+//    SOCRobberLocation(board.hexesWithNodes.find(_.hex.getResourceAndNumber.isEmpty).get.node)
+//  }
+//  implicit def dCardsInDeck[BOARD <: BoardConfiguration, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE]]:  SOCStateFieldGenerator[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE], SOCDevelopmentCardsInDeck] = DevelopmentCardSOCState.fieldGenerator(25)
+//  implicit def stateFactory[BOARD <: BoardConfiguration, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE]]: SOCStateFactory[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]] = new SOCStateFactory[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]] {
+//    override def create(boardConf: BOARD, playerIds: Seq[Int])(implicit boardGenerator: BoardGenerator[BOARD], invHelperFactory: InventoryHelperFactory[Resource, PERSPECTIVE]): BaseGameSOCState[BOARD, PERSPECTIVE] = {
+//      SOCStateFactory[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE]](boardConf, playerIds.toList).apply(BaseGameSOCState[BOARD, PERSPECTIVE] _)
+//    }
+//  }
+//
+//
+//
+//  def baseGame[BOARD <: BoardConfiguration, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE] = {
+//    SOCGame.builder[BOARD, Resource, PERSPECTIVE, PerfectInfo, BaseGameSOCState]
+//      .addMove[BuildSettlementMove] {
+//        case (state, move: BuildSettlementMove) => (state.buildSettlement(move), )
+//      }
+//
+//  }
+//
+//
+//
+//
+//
+
+
+//
+//      val settlementAction = BuildSettlementAction[BOARD, Resource, PERSPECTIVE, PerfectInfo, BaseGameSOCState](5, ResourceSet(Wood, Brick, Wheat, Sheep))
+//    val roadAction = BuildRoadAction[BOARD, Resource, PERSPECTIVE, PerfectInfo, BaseGameSOCState](15, ResourceSet(Wood, Brick))
+//      val cityAction = BuildCityAction[BOARD, Resource, PERSPECTIVE, PerfectInfo, BaseGameSOCState](4, ResourceSet(Ore, Ore, Ore, Wheat, Wheat))
+//
+//      val initialPlacementAction = InitialPlacementAction[BOARD, STATE](settlementAction, roadAction)
+//      val endTurnAction = EndTurnAction[BOARD, Resource, STATE]
+//      val portTradeAction = PortTradeAction[BOARD, STATE]
+//
+//      SOCGame.builder[BOARD, Resource, PERSPECTIVE, PerfectInfo, BaseGameSOCState]
+//        .addAction { case (state, bsm: BuildSettlementMove) =>
+//          (state.buildSettlement(bsm, Some(ResourceSet(Wood, Brick, Wheat, Sheep))), Map.empty)}
+//        .addAction { case (state, brm: BuildRoadMove) =>
+//          (state.buildRoad(brm, Some( ResourceSet(Wood, Brick))), Map.empty)}
+//        .addAction { case (state, bcm: BuildCityMove) =>
+//          (state.buildCity(bcm, ResourceSet(Ore, Ore, Ore, Wheat, Wheat)), Map.empty)}
+//
+//
+//
+//
+//
+//        .addAction(settlementAction) { case (m, state) =>
+//          (state.buildSettlement(m, Some(settlementAction.cost)), Map.empty)}
+//        .addAction(cityAction) { case (m: BuildCityMove, state) =>
+//          (state.buildCity(m, cityAction.cost), Map.empty)}
+//        .addAction(roadAction) { case (m: BuildRoadMove, state) =>
+//          (state.buildRoad(m, Some(roadAction.cost)), Map.empty)}
+//        .addAction(initialPlacementAction) { case (m: InitialPlacementMove, state) =>
+//          (state.placeInitialPlacement(m), Map.empty)}
+//        .addAction(endTurnAction) { case (_:EndTurnMove, state) =>
+//          (state.incrementTurn, Map.empty)}
+//        .addAction(portTradeAction) { case (m: PortTradeMove, state) =>
+//          (state.doPortTrade(m), Map.empty)}
+//        .initGame(playerIds.head, initialPlacementAction)(boardConf, playerIds)
+//
 //  val boardConf: BaseBoardConfiguration = BaseCatanBoard.randomBoard()
+//
+//  val a = game[BaseBoardConfiguration, PerfectInfoInv[Resource]](boardConf, (1 to 4).toList)
+//
+//  val gameActionMoves = a.getAllPlayerActions(a.currentPlayer).flatMap { action =>
+//    action.getAllPossibleMovesForState(a.state, a.getInventories(a.currentPlayer), a.currentPlayer)
+//  }
+
+
+//
 //
 //  val settlementAction = BuildSettlementAction[BASE](5, ResourceSet(Wood, Brick, Wheat, Sheep))
 //  val roadAction = BuildRoadAction[BASE](15, ResourceSet(Wood, Brick))
@@ -130,4 +247,3 @@ object BaseGame {
 //    .create(initialPlacementAction)
 
 
-}

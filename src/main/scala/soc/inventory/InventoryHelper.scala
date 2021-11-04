@@ -1,8 +1,10 @@
 package soc.inventory
 
+import soc.board.BoardConfiguration
 import soc.inventory.InventoryHelper.{PublicInfoInv, PublicInvHelper}
 import soc.inventory.SimpleInventoryHelper._
 import soc.inventory.resources.SOCTransactions
+import soc.moves2.{SOCState}
 
 trait InventoryHelper[II <: InventoryItem, T <: InventoryHelper[II, T]] { this: T =>
   type INV <: Inventory[II, INV]
@@ -24,7 +26,6 @@ case class SimpleInventoryHelper[II <: InventoryItem, PI <: SimpleInventory[II, 
 ) extends InventoryHelper[II, SimpleInventoryHelper[II, PI, I]] {
   override type INV = I
 
-
   override def updateInventory(transactions: List[SOCTransactions[II]]): SimpleInventoryHelper[II, PI, I] = copy {
     playerInventories.map { case (p, inv) => p -> inv.updateResources(p, transactions) }
   }
@@ -37,7 +38,14 @@ trait InventoryHelperFactory[II <: InventoryItem, H <: InventoryHelper[II, H]] {
 }
 
 object InventoryHelper {
-  private type PublicInvHelper[II, PUBLIC, PUBLIC_INV] = InventoryHelper[II, PUBLIC] {type INV = PUBLIC_INV}
+
+  //implicit def fieldGenerator[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], STATE <: SOCState[BOARD, II, PERSPECTIVE, STATE]](implicit inventoryHelperFactory: InventoryHelperFactory[II, PERSPECTIVE]): SOCStateFieldGenerator[BOARD, II, PERSPECTIVE, STATE, PERSPECTIVE] = { case(_, players) => inventoryHelperFactory.create(players) }
+
+  type PerfectInvHelper[II <: InventoryItem, P <: InventoryHelper[II, P]] = InventoryHelper[II, P] {
+    type INV <: PerfectInfoInventory[II, INV]
+  }
+
+  private type PublicInvHelper[II <: InventoryItem, PUBLIC <: InventoryHelper[II, PUBLIC], PUBLIC_INV] = InventoryHelper[II, PUBLIC] {type INV = PUBLIC_INV}
 
   type PerfectInfoInv[II <: InventoryItem] = SimpleInventoryHelper[II, PublicInfoInventoryImpl[II], PerfectInfoInventoryImpl[II]]
   type PublicInfoInv[II <: InventoryItem] = SimpleInventoryHelper[II, PublicInfoInventoryImpl[II], PublicInfoInventoryImpl[II]]

@@ -14,7 +14,7 @@ case class PlayMonopolyMove(player: Int, res: Resource) extends PlayDevelopmentC
 case class PlayMonopolyMoveResult(move: PlayMonopolyMove, cardsLost: Map[Int, Resources]) extends SOCMoveResult[PlayMonopolyMove] {
   override def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, SOCMoveResult[PlayMonopolyMove]] = playerIds.map(_ -> this).toMap
 }
-case class PlayMonopolyAction[BOARD <: BoardConfiguration, STATE[P] <: SOCState[BOARD, Resource, P, STATE[P]]](cardsInDeck: Int, moveResultProvider: MoveResultProvider[BOARD, Resource, STATE, PlayMonopolyMove, PlayMonopolyMoveResult]) extends PlayDevelopmentCardAction[BOARD, Resource, STATE, PlayMonopolyMove] {
+case class PlayMonopolyAction[BOARD <: BoardConfiguration, STATE[P] <: SOCState[BOARD, Resource, P, STATE[P]]](cardsInDeck: Int, moveResultProvider: MoveResultProvider[BOARD, Resource, STATE, PlayMonopolyMove, PlayMonopolyMoveResult]) extends PlayDevelopmentCardAction[BOARD, Resource, STATE, PlayMonopolyMove, PlayMonopolyAction[BOARD, STATE]] {
   override val cardType: DevelopmentCard = Monopoly
   override type R = PlayMonopolyMoveResult
 

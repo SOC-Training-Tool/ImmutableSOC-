@@ -10,7 +10,7 @@ import soc.state.GameState
 case class PlayRoadBuilderMove(player: Int, road1: Edge, road2: Option[Edge]) extends PerfectPlayDevelopmentCardMove[PlayRoadBuilderMove] {
   override def card: DevelopmentCard = RoadBuilder
 }
-case class PlayRoadBuilderAction[BOARD <: BoardConfiguration, II <: InventoryItem, STATE[P] <: RoadSOCState[BOARD, II, P, STATE[P]]](cardsInDeck: Int, buildRoadAction: BuildRoadAction[BOARD, II, STATE]) extends PlayDevelopmentCardAction[BOARD, II, STATE, PlayRoadBuilderMove] with PerfectInformationMoveGameAction[BOARD, Resource, STATE, PlayRoadBuilderMove]{
+case class PlayRoadBuilderAction[BOARD <: BoardConfiguration, II <: InventoryItem, STATE[P] <: RoadSOCState[BOARD, II, P, STATE[P]]](cardsInDeck: Int, buildRoadAction: BuildRoadAction[BOARD, II, STATE]) extends PlayDevelopmentCardAction[BOARD, II, STATE, PlayRoadBuilderMove, PlayRoadBuilderAction[BOARD, II, STATE]] with PerfectInformationMoveGameAction[BOARD, Resource, STATE, PlayRoadBuilderAction[BOARD, II, STATE]]{
   override val cardType: DevelopmentCard = RoadBuilder
 
   override def getAllMoves[PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo]](state: STATE[PERSPECTIVE], inv: PerfectInfo, position: Int): Seq[PlayRoadBuilderMove] = {

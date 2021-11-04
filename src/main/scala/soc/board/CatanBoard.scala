@@ -47,130 +47,15 @@ case class Edge(v1: Vertex, v2: Vertex) extends BuildingLocation {
   override def hashCode: Int = (v1.node * v1.node) + (v2.node * v2.node)
 }
 
-case class CatanBoard[T <: BoardConfiguration] private(
-  val hexesWithNodes: Seq[BoardHex],
-  val vertices: Seq[Vertex],
-  val edges: Seq[Edge],
-  val edgesFromVertex: Map[Vertex, Seq[Edge]],
-  val neighboringVertices: Map[Vertex, Seq[Vertex]],
-  val adjacentHexes: Map[Vertex, Seq[BoardHex]],
-  val portMap: Map[Edge, Port],
-  robberHex: Int,
-  buildingMap: Map[BuildingLocation, CatanBuilding] = Map.empty,
-  roadLengths: Map[Int, Int] = Map.empty
-) {
-
-  val verticesBuildingMap: Map[Vertex, VertexBuilding] = buildingMap.collect {
-    case(v: Vertex, b: VertexBuilding) => v -> b
-  }
-  val edgesBuildingMap: Map[Edge, EdgeBuilding] = buildingMap.collect {
-    case (e: Edge, b: EdgeBuilding) => e -> b
-  }
-
-  def canBuildSettlement(vertex: Vertex, playerId: Int, initialPlacement: Boolean = false): Boolean = {
-    vertices.contains(vertex) &&
-      !verticesBuildingMap.contains(vertex) &&
-      neighboringVertices(vertex).forall { v => !verticesBuildingMap.contains(v) } &&
-      (if (!initialPlacement) {
-        edgesFromVertex(vertex).exists { edge =>
-          edgesBuildingMap.get(edge).fold(false)(_.playerId == playerId)
-        }
-      } else true)
-  }
-
-  def buildSettlement(vertex: Vertex, playerId: Int): CatanBoard[T] = {
-    val settlement = Settlement(playerId)
-    val vertexMap = buildingMap + (vertex -> settlement)
-    copy(buildingMap = vertexMap)
-  }
-
-  def canBuildCity(vertex: Vertex, playerId: Int): Boolean = {
-    verticesBuildingMap.contains(vertex) &&
-      verticesBuildingMap(vertex).isInstanceOf[Settlement] && {
-      val settlement = verticesBuildingMap(vertex)
-      settlement.playerId == playerId
-    }
-  }
-
-  def buildCity(vertex: Vertex, playerId: Int): CatanBoard[T] = {
-    val city = City(playerId)
-    val vertexMap = (buildingMap - vertex) + (vertex -> city)
-    copy(buildingMap = vertexMap)
-  }
-
-  def canBuildRoad(edge: Edge, playerId: Int): Boolean = {
-    def canBuildRoadOffVertex(v: Vertex): Boolean = {
-      if (verticesBuildingMap.get(v).fold(false)(_.playerId == playerId)) true
-      else if (verticesBuildingMap.get(v).fold(false)(_.playerId != playerId)) false
-      else {
-        edgesFromVertex(v).filterNot(_ == edge).exists { e =>
-          edgesBuildingMap.contains(e) && edgesBuildingMap(e).playerId == playerId
-        }
-      }
-    }
-
-    edges.contains(edge) && !edgesBuildingMap.contains(edge) && (canBuildRoadOffVertex(edge.v1) || canBuildRoadOffVertex(edge.v2))
-  }
-
-  def getSettlementVerticesForPlayer(id: Int): Seq[Vertex] = verticesBuildingMap.toSeq.filter {
-    case (_, Settlement(`id`)) => true
-    case _ => false
-  }.map(_._1)
-  def getNumSettlementsForPlayer(id: Int): Int = getSettlementVerticesForPlayer(id).length
-
-  def getNumCityVerticesForPlayer(id: Int): Seq[Vertex] = verticesBuildingMap.toSeq.filter {
-    case (_, City(`id`)) => true
-    case _ => false
-  }.map(_._1)
-  def getNumCitiesForPlayer(id: Int): Int = getNumCityVerticesForPlayer(id).length
-
-  def getRoadEdgesForPlayer(id: Int): Seq[Edge] = edgesBuildingMap.toSeq.filter {
-    case (_, Road(`id`)) => true
-    case _ => false
-  }.map(_._1)
-  def getNumRoadsForPlayer(id: Int): Int = getRoadEdgesForPlayer(id).length
-
-  def getPortsForPlayer(id: Int): Set[Port] = getSettlementVerticesForPlayer(id).flatMap(getPort).toSet
-
-  def getPort(vertex: Vertex): Option[Port] = {
-    portMap.find { case (edge, _) => edge.contains(vertex) }.map(_._2)
-  }
-
-  def getPossibleSettlements(playerId: Int, initial: Boolean): Seq[Vertex] = {
-    vertices.filter(canBuildSettlement(_, playerId, initial))
-  }
-
-  def getPossibleCities(playerId: Int): Seq[Vertex] = {
-    vertices.filter(canBuildCity(_, playerId))
-  }
-
-  def getPossibleRoads(playerId: Int): Seq[Edge] = {
-    edges.filter(canBuildRoad(_, playerId))
-  }
-
-  def playersOnHex(node: Int): Seq[Int] = {
-    hexesWithNodes.find(_.node == node).fold(List.empty[Int])(_.vertices.flatMap { v =>
-      verticesBuildingMap.get(v).map(_.playerId)
-    }.distinct)
-  }
-
-  def longestRoadLength(playerId: Int): Int = roadLengths.getOrElse(playerId, 0)
-
-  def getResourcesGainedOnRoll(roll: Int): Map[Int, Resources] = {
-    hexesWithNodes.filter { boardHex =>
-      boardHex.hex.getNumber.fold(false)(_.number == roll) && boardHex.node != robberHex
-    }.flatMap { node =>
-      node.vertices.flatMap { vertex =>
-        verticesBuildingMap.get(vertex) match {
-          case Some(Settlement(playerId)) => Seq(playerId -> node.hex.getResource.get)
-          case Some(City(playerId)) => Seq(playerId -> node.hex.getResource.get, playerId -> node.hex.getResource.get)
-          case _ => Nil
-        }
-      }
-    }.groupBy(_._1).view.mapValues(_.map(_._2).foldLeft(ResourceSet.empty[Int])(_.add(1, _)))
-  }.toMap
-
-
+case class CatanBoard[T <: BoardConfiguration] (
+  hexesWithNodes: Seq[BoardHex],
+  vertices: Seq[Vertex],
+  edges: Seq[Edge],
+  edgesFromVertex: Map[Vertex, Seq[Edge]],
+  neighboringVertices: Map[Vertex, Seq[Vertex]],
+  adjacentHexes: Map[Vertex, Seq[BoardHex]],
+  portMap: Map[Edge, Port]) {
+  lazy val numberHexes: Map[Int, Seq[BoardHex]] = hexesWithNodes.groupBy(_.hex.getNumber)
 }
 
 object CatanBoard {
@@ -184,18 +69,6 @@ object CatanBoard {
       BoardHex(node, hex, vertexMap(node))
     }
     CatanBoard(hexesWithNodes, portMap)
-  }
-
-  def apply[T <: BoardConfiguration](
-    hexes: Seq[BoardHex],
-    portMap: Map[Edge, Port],
-    robber: Int,
-    buildingMap: Map[BuildingLocation, CatanBuilding]
-  ): CatanBoard[T] = {
-    CatanBoard(hexes, portMap).copy(
-      buildingMap = buildingMap,
-      robberHex = robber
-    )
   }
 
   def apply[T <: BoardConfiguration](
@@ -229,8 +102,7 @@ object CatanBoard {
       vertex -> hexesWithNodes.filter(_.vertices.contains(vertex))
     }.toMap
 
-    val robber = hexesWithNodes.find(_.hex.getNumber.isEmpty).fold(0)(_.node)
-    CatanBoard(hexesWithNodes, vertices, edges, edgesFromVertex, neighboringVertices, adjacentHexes, portMap, robber)
+    CatanBoard(hexesWithNodes, vertices, edges, edgesFromVertex, neighboringVertices, adjacentHexes, portMap)
   }
 
   def checkValid[T <: BoardConfiguration](board: CatanBoard[T])(implicit boardRules: BoardRules[T]): Boolean = {

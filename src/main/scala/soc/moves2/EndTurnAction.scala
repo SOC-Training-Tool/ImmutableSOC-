@@ -1,11 +1,26 @@
 package soc.moves2
 
+import shapeless.{::, HList}
 import soc.board.BoardConfiguration
-import soc.inventory.{CatanSet, InventoryHelper, PerfectInfoInventory, Resource}
+import soc.inventory.{InventoryHelper, InventoryItem, PerfectInfoInventory}
+import soc.moves2.RollDiceSOCState._
+import soc.moves2.SOCState.{SOCState, _}
 
-case class EndTurnMove(player: Int) extends PerfectInformationSOCMove[EndTurnMove]
-case class EndTurnAction[BOARD <: BoardConfiguration, II <: Resource, STATE[P] <: SOCState[BOARD, P, II, STATE[P]]]() extends PerfectInformationMoveGameAction[BOARD, II, STATE, EndTurnMove] {
-  override def canDoAction[PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo]](state: STATE[PERSPECTIVE], inv: PerfectInfo, position: Int): Boolean = true
-  override def getAllMoves[PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo]](state: STATE[PERSPECTIVE], inv: PerfectInfo, position: Int): Seq[EndTurnMove] = List(EndTurnMove(position))
+case class EndTurnMove(player: Int) extends PerfectInformationSOCMove
+
+object EndTurnMove {
+
+  implicit def moveGenerator[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo], STATE <: HList]: MoveGenerator[BOARD, II, PERSPECTIVE, STATE, PerfectInfo, EndTurnMove] = {
+    (_: STATE, _: PerfectInfo, pos: Int) => Seq(EndTurnMove(pos))
+  }
+
+  implicit def baseCanDoAction[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo], STATE <: HList](implicit dep: DependsOn[STATE, SOCCanRollDice :: SOCState[BOARD, II, PERSPECTIVE]]): CanDoAction[BOARD, II, PERSPECTIVE, STATE, PerfectInfo, EndTurnMove] = {
+    (state, _, player) =>
+      implicit val stateDep = dep.innerDependency[SOCState[BOARD, II, PERSPECTIVE]]
+      state.rolledDice && state.currentPlayer == player
+  }
+
+  implicit def baseCanDoMove[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo], STATE <: HList](implicit canDoAction: CanDoAction[BOARD, II, PERSPECTIVE, STATE, PerfectInfo, EndTurnMove]): CanDoMove[BOARD, II, PERSPECTIVE, STATE, PerfectInfo, EndTurnMove] = {
+    (state, inv, move) => canDoAction(state, inv, move.player)
+  }
 }
-

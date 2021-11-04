@@ -62,12 +62,12 @@ case class PossibleHands(hands: Seq[(Int, Map[Int, Resources])]) {
   }
 
   @tailrec
-  final def calculateHands(transactions: List[SOCTransactions]): PossibleHands = {
+  final def calculateHands(transactions: List[SOCTransactions[Resource]]): PossibleHands = {
     if (transactions.isEmpty) copy()
     else calculateHands(transactions.head).calculateHands(transactions.tail)
   }
 
-  def calculateHands(transaction: SOCTransactions): PossibleHands = transaction match {
+  def calculateHands(transaction: SOCTransactions[Resource]): PossibleHands = transaction match {
     case Gain(player, set) => playerGainCards(player, set)
     case Lose(player, set) => playerLoseCards(player, set)
     case Steal(robber, victim, Some(set)) => playerLoseCards(victim, set).playerGainCards(robber, set)
