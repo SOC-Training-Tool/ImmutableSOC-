@@ -1,6 +1,7 @@
 package util
 
-import shapeless.{::, DepFn0, HList, HNil}
+import shapeless.ops.hlist.Selector
+import shapeless.{::, DepFn0, DepFn1, HList, HNil}
 
 object hlist {
 
@@ -14,7 +15,7 @@ object hlist {
 
   object HListWrapper {
 
-    type Aux[T, W[_ <: T], L <: HList, Out0] = HListWrapper[T, W, L] { type Out = Out0}
+    type Aux[T, W[_ <: T], L <: HList, Out0] = HListWrapper[T, W, L] {type Out = Out0}
 
     def apply[T, W[_ <: T], L <: HList](implicit hlw: HListWrapper[T, W, L]): Aux[T, W, L, hlw.Out] = hlw
 
@@ -28,6 +29,28 @@ object hlist {
       override type Out = HNil
 
       override def apply(): Out = HNil
+    }
+
+  }
+
+  trait WrappedSelectAll[F, W[_ <: F], WL <: HList, SL <: HList] extends DepFn1[WL] {
+    type Out <: HList
+  }
+
+  object WrappedSelectAll {
+
+    type Aux[F, W[_ <: F], WL <: HList, SL <: HList, Out0] = WrappedSelectAll[F, W, WL, SL] {type Out = Out0}
+
+    implicit def wrappedSelectAll[F, W[_ <: F], WL <: HList, H <: F, T <: HList](implicit s: Selector[WL, W[H]], wsa: WrappedSelectAll[F, W, WL, T]): Aux[F, W, WL, H :: T, W[H] :: wsa.Out] = new WrappedSelectAll[F, W, WL, H :: T] {
+      override type Out = W[H] :: wsa.Out
+
+      override def apply(t: WL): Out = s.apply(t) :: wsa.apply(t)
+    }
+
+    implicit def hNil[F, W[_ <: F], WL <: HList]: Aux[F, W, WL, HNil, HNil] = new WrappedSelectAll[F, W, WL, HNil] {
+      override type Out = HNil
+
+      override def apply(t: WL): Out = HNil
     }
 
   }

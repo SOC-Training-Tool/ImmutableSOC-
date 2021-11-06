@@ -9,7 +9,7 @@ import soc.moves2.SOCState.{SOCState, _}
 import soc.moves2._
 import util.MapWrapper
 
-case class BuildSettlementMove(player: Int, vertex: Vertex) extends PerfectInformationSOCMove
+case class BuildSettlementMove(player: Int, vertex: Vertex) extends PerfectInformationSOCMove[BuildSettlementMove]
 
 case class SOCSettlementMap(m: Map[Vertex, Settlement]) extends MapWrapper[Vertex, Settlement]
 

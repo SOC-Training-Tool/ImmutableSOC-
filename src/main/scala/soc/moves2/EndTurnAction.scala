@@ -6,7 +6,7 @@ import soc.inventory.{InventoryHelper, InventoryItem, PerfectInfoInventory}
 import soc.moves2.RollDiceSOCState._
 import soc.moves2.SOCState.{SOCState, _}
 
-case class EndTurnMove(player: Int) extends PerfectInformationSOCMove
+case class EndTurnMove(player: Int) extends PerfectInformationSOCMove[EndTurnMove]
 
 object EndTurnMove {
 
@@ -22,5 +22,9 @@ object EndTurnMove {
 
   implicit def baseCanDoMove[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo], STATE <: HList](implicit canDoAction: CanDoAction[BOARD, II, PERSPECTIVE, STATE, PerfectInfo, EndTurnMove]): CanDoMove[BOARD, II, PERSPECTIVE, STATE, PerfectInfo, EndTurnMove] = {
     (state, inv, move) => canDoAction(state, inv, move.player)
+  }
+
+  implicit def updateState[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], STATE <: HList](implicit gameOps: GameOps[BOARD, II, ]) = new UpdateState[BOARD, II, PERSPECTIVE, EndTurnMove, STATE] {
+    override def apply(t: STATE, u: EndTurnMove): STATE = t.incrementTurn
   }
 }

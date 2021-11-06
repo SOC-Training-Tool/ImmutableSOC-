@@ -1,18 +1,11 @@
 package soc.moves2
 
-import shapeless.ops.hlist.{SelectAll, ToTraversable}
-import shapeless.{DepFn1, DepFn2, HList}
+import shapeless.ops.hlist.{SelectAll, Selector, ToTraversable}
+import shapeless.{DepFn1, DepFn2, HList, ::}
 import soc.inventory.{CatanSet, InventoryItem}
 
 trait SOCMove {
   def player: Int
-}
-
-object SOCMove {
-  implicit class SOCMoveOps[A <: SOCMove](move: A) {
-    def getMoveResult[STATE <: HList](state: STATE)(implicit moveResultProvider: MoveResultProvider[STATE, A])
-    : moveResultProvider.R = moveResultProvider.getMoveResult(move, state)
-  }
 }
 
 trait SOCMoveResult {
@@ -28,12 +21,9 @@ object SOCMoveResult {
   type Move[M <: SOCMove] = SOCMoveResult {type A = M}
 }
 
-trait PerfectInformationSOCMove extends SOCMove with SOCMoveResult {
-  self =>
-  type A = self.type
-
-  def move = this
-
+trait PerfectInformationSOCMove[A0 <: SOCMove] extends SOCMove with SOCMoveResult { self: A0 =>
+  type A = A0
+  def move: A = self
   def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, SOCMoveResult.Move[A]] = playerIds.map(id => id -> this).toMap
 }
 
@@ -63,15 +53,14 @@ object Cost {
   }
 }
 
-
 trait UpdateState[B, I, P, R <: SOCMoveResult, STATE <: HList] extends DepFn2[STATE, R] {
   override type Out = STATE
 }
 
 /**
- * applies the move result to the current state resulting in a function of state and move result
- * to the updated state and a map of players to the possible "actions" they can perform
- */
+  * applies the move result to the current state resulting in a function of state and move result
+  * to the updated state and a map of players to the possible "actions" they can perform
+  */
 trait ApplyMoveResult[B, I, P, R <: SOCMoveResult, STATE <: HList, W[_ <: SOCMoveResult], ACTIONS <: HList] extends DepFn1[ACTIONS] {
   override type Out = (STATE, R) => (STATE, Map[Int, Seq[W[_]]])
 }
@@ -85,6 +74,5 @@ object ApplyMoveResult {
     }
   }
 }
-
 
 

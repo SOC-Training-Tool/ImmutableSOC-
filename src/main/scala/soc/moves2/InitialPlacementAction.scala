@@ -8,7 +8,7 @@ import soc.inventory.resources.{Gain, Lose}
 import soc.moves2.SOCState.SOCState
 import soc.moves2.build._
 
-case class InitialPlacementMove(player: Int, first: Boolean, vertex: Vertex, edge: Edge) extends PerfectInformationSOCMove
+case class InitialPlacementMove(player: Int, first: Boolean, vertex: Vertex, edge: Edge) extends PerfectInformationSOCMove[InitialPlacementMove]
 
 object InitialPlacementMove {
 
@@ -36,7 +36,15 @@ object InitialPlacementMove {
       canDoAction(state, inv, move.player) && state.canPlaceInitialSettlement(move)
   }
 
-  type INIT_PLACEMENT_NEXT_MOVES[W[_ <: SOCMoveResult]] = W[InitialPlacementMove] :: W[RollDiceResult] :: HNil
+  implicit def updateState[BOARD <: BoardConfiguration, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE], STATE <: HList](state: STATE)(implicit dep: DependsOn[STATE, SOCSettlementMap :: SOCRoadMap :: SOCState[BOARD, Resource, PERSPECTIVE]], settlementOps: SettlementBoardOps[BOARD, Resource, PERSPECTIVE, STATE], roadOps: RoadBoardOps[BOARD, Resource, PERSPECTIVE, STATE]) = new UpdateState[BOARD, Resource, PERSPECTIVE, InitialPlacementMove, STATE] {
+    override def apply(t: STATE, u: InitialPlacementMove): STATE = {
+      import InitialPlacementSOCState._
+      t.placeInitialPlacement(u)
+    }
+  }
+
+
+    type INIT_PLACEMENT_NEXT_MOVES[W[_ <: SOCMoveResult]] = W[InitialPlacementMove] :: W[RollDiceResult] :: HNil
 
   implicit def baseNextMoves[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], W[_ <: SOCMoveResult], A <: HList, STATE <: HList](implicit ws: Selector[A, W[InitialPlacementMove]], sa: SelectAll[A, INIT_PLACEMENT_NEXT_MOVES[W]], dep: DependsOn[STATE, SOCSettlementMap :: SOCState[BOARD, II, PERSPECTIVE]], settlementBoardOps: SettlementBoardOps[BOARD, II, PERSPECTIVE, STATE]): NextMove[BOARD, II, PERSPECTIVE, W, A, STATE, InitialPlacementMove] = (a: A) => {
     import SOCState._

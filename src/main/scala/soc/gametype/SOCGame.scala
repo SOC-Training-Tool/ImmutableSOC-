@@ -10,6 +10,12 @@ import soc.moves2.build.BuildSettlementMove
 import soc.moves2.{SOCState => _, _}
 import util.hlist.{HListWrapper, TypeWrapper}
 
+class SOCGame[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo], STATE <: HList](state: STATE,
+                                                                                                                                                                                       moveMap: Map[Int, Seq[GameAction[BOARD, II, PERSPECTIVE, PerfectInfo, STATE, _]]]) {
+  def getAllMovesForState(inv: PerfectInfo, pos: Int): Seq[GameActionMove[BOARD, II, PERSPECTIVE, PerfectInfo, STATE, _]] = moveMap.getOrElse(pos, Nil).flatMap(_.getAllMovesForState(state, inv, pos))
+
+}
+
 object SOCGame {
 
   def build[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo], STATE <: HList](f: SOCGameFactory[BOARD, II, PERSPECTIVE, PerfectInfo, STATE] => ()) = {
@@ -20,17 +26,26 @@ object SOCGame {
 
 class SOCGameFactory[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo], STATE <: HList] {
 
-  trait GameAction[R <: SOCMoveResult] {
-    def getAllMovesForState(state: STATE, inv: PerfectInfo, pos: Int): Seq[R#A]
-  }
+  type GA[R <: SOCMoveResult] = GameAction[BOARD, II, PERSPECTIVE, PerfectInfo, STATE, R]
 
   implicit def GameActionWrapper[R <: SOCMoveResult](implicit moveGenerator: MoveGenerator[BOARD, II, PERSPECTIVE, STATE, PerfectInfo, R#A],
-                                                     canDoAction: CanDoAction[BOARD, II, PERSPECTIVE, STATE, PerfectInfo, R#A],
-                                                     canDoMove: CanDoMove[BOARD, II, PERSPECTIVE, STATE, PerfectInfo, R#A]): TypeWrapper[SOCMoveResult, GameAction, R] = new TypeWrapper[SOCMoveResult, GameAction, R] {
-    override def apply(): GameAction[R] = (state: STATE, inv: PerfectInfo, pos: Int) =>
-      if (canDoAction(state, inv, pos))
-        moveGenerator.getAllMoves(state, inv, pos).filter(canDoMove(state, inv, _))
-      else Nil
+                                                     cdA: CanDoAction[BOARD, II, PERSPECTIVE, STATE, PerfectInfo, R#A],
+                                                     cdM: CanDoMove[BOARD, II, PERSPECTIVE, STATE, PerfectInfo, R#A],
+                                                     updateState: UpdateState[BOARD, II, PERSPECTIVE, R, STATE],
+                                                     resultProvider: MoveResultProvider.Aux[BOARD, II, PERSPECTIVE, STATE, R]): TypeWrapper[SOCMoveResult, GA, R] = new TypeWrapper[SOCMoveResult, GA, R] {
+    override def apply(): GA[R] = new GameAction[BOARD, II, PERSPECTIVE, PerfectInfo, STATE, R] {
+
+      override def canDoAction(state: STATE, inv: PerfectInfo, pos: Int): Boolean = cdA.apply(state, inv, pos)
+
+      override def canDoMove(state: STATE, inv: PerfectInfo, move: R#A): Boolean = cdM.apply(state, inv, move)
+
+      override def getAllMoves(state: STATE, inv: PerfectInfo, pos: Int): Seq[R#A] = moveGenerator.getAllMoves(state, inv, pos)
+
+      override def applyMove(state: STATE, move: R#A): (R, STATE) = {
+        val result = resultProvider.getMoveResult(move, state)
+        (result, updateState(state, result))
+      }
+    }
   }
 
   trait GameContextBuilder[Actions <: HList, MOVES <: HList] extends DepFn1[Actions] {
@@ -41,13 +56,11 @@ class SOCGameFactory[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTI
 
     def apply[ACTIONS <: HList](implicit gcb: GameContextBuilder[ACTIONS, ACTIONS]): GameContextBuilder[ACTIONS, ACTIONS] = gcb
 
-    implicit def contextBuilder[ACTIONS <: HList, H <: SOCMoveResult, T <: HList](implicit nextMove: NextMove[BOARD, II, PERSPECTIVE, GameAction, ACTIONS, STATE, H], applyMoveResult: ApplyMoveResult[BOARD, II, PERSPECTIVE, H, STATE], nextContext: GameContextBuilder[ACTIONS, T]): GameContextBuilder[ACTIONS, GameAction[H] :: T] = (actions: ACTIONS) => {
-      val (action, func) = nextMove.apply(actions)
-      val f: Function[(STATE, SOCMoveResult), (STATE, Map[Int, Seq[GameAction[_]]])] = { tup =>
-        val (s: STATE, r: H) = tup
-        (applyMoveResult(s, r), func(s, r))
+    implicit def contextBuilder[ACTIONS <: HList, H <: SOCMoveResult, T <: HList](implicit s: Selector[ACTIONS, GameAction[H]], applyMoveResult: ApplyMoveResult[BOARD, II, PERSPECTIVE, H, STATE, GameAction, ACTIONS], nextContext: GameContextBuilder[ACTIONS, T]) = new GameContextBuilder[ACTIONS, GameAction[H] :: T] {
+      override def apply(actions: ACTIONS): Map[GameAction[_], (STATE, SOCMoveResult) => (STATE, Map[Int, Seq[GameAction[_]]])] = {
+        val f: Function[(STATE, SOCMoveResult), (STATE, Map[Int, Seq[GameAction[_]]])] = applyMoveResult.apply(actions)
+        nextContext.apply(actions) + (s.apply(actions) -> f)
       }
-      nextContext.apply(actions) + (action -> f)
     }
 
     implicit def hNil[ACTIONS <: HList]: GameContextBuilder[ACTIONS, HNil] = (_: ACTIONS) => Map.empty
@@ -63,7 +76,7 @@ class SOCGameFactory[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTI
     }
   }
 
-  def apply[Moves <: HList](implicit hlw: HListWrapper[SOCMoveResult, GameAction, Moves]): SOCGameBuilder[hlw.Out] = new SOCGameBuilder[hlw.Out](hlw.apply)
+  def apply[Moves <: HList](implicit hlw: HListWrapper[SOCMoveResult, GA, Moves]): SOCGameBuilder[hlw.Out] = new SOCGameBuilder[hlw.Out](hlw.apply)
 }
 
 //game

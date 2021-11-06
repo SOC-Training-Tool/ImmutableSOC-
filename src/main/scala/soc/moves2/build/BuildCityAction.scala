@@ -9,7 +9,7 @@ import soc.moves2.SOCState._
 import soc.moves2.{SOCState, SOCState => _, _}
 import util.MapWrapper
 
-case class BuildCityMove(player: Int, vertex: Vertex) extends PerfectInformationSOCMove
+case class BuildCityMove(player: Int, vertex: Vertex) extends PerfectInformationSOCMove[BuildCityMove]
 
 case class SOCCityMap(m: Map[Vertex, City]) extends MapWrapper[Vertex, City]
 
@@ -66,12 +66,13 @@ object CitySOCState {
       canDoAction(state, inv, move.player) && state.canBuildCity(move)
   }
 
-  implicit def applyMoveResult[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], STATE <: HList](implicit dep: DependsOn[STATE, SOCCityMap :: SOCState[BOARD, II, PERSPECTIVE]], cityBoardOps: CityBoardOps[BOARD, II, PERSPECTIVE, STATE], cost: Cost[II, BuildCityMove]): ApplyMoveResult[BOARD, II, PERSPECTIVE, BuildCityMove, STATE] = (s, m) =>
-    s.buildCity(m, cost.getCost)
-
-  type BASE_NEXT_MOVES[W[_ <: SOCMoveResult]] = W[BuildSettlementMove] :: W[BuildRoadMove] :: W[BuildCityMove] :: W[EndTurnMove] :: HNil // TODO add full list
-  implicit def baseNextMoves[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], W[_ <: SOCMoveResult], A <: HList, STATE <: HList](implicit ws: Selector[A, W[BuildCityMove]], sa: SelectAll[A, BASE_NEXT_MOVES[W]]): NextMove[BOARD, II, PERSPECTIVE, W, A, STATE, BuildCityMove] = (a: A) => {
-    val func = (_: STATE, r: BuildCityMove) => Map(r.player -> sa.apply(a).toList)
-    ws.apply(a) -> func
+  implicit def updateState[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], STATE <: HList](implicit dep: DependsOn[STATE, SOCCityMap :: SOCState[BOARD, II, PERSPECTIVE]], cityBoardOps: CityBoardOps[BOARD, II, PERSPECTIVE, STATE], cost: Cost[II, BuildCityMove]) = new UpdateState[BOARD, II, PERSPECTIVE, BuildCityMove, STATE] {
+    override def apply(t: STATE, u: BuildCityMove): STATE = t.buildCity(u, cost.getCost)
   }
+
+//  type BASE_NEXT_MOVES[W[_ <: SOCMoveResult]] = W[BuildSettlementMove] :: W[BuildRoadMove] :: W[BuildCityMove] :: W[EndTurnMove] :: HNil // TODO add full list
+//  implicit def baseNextMoves[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], W[_ <: SOCMoveResult], A <: HList, STATE <: HList](implicit ws: Selector[A, W[BuildCityMove]], sa: SelectAll[A, BASE_NEXT_MOVES[W]]): NextMove[BOARD, II, PERSPECTIVE, W, A, STATE, BuildCityMove] = (a: A) => {
+//    val func = (_: STATE, r: BuildCityMove) => Map(r.player -> sa.apply(a).toList)
+//    ws.apply(a) -> func
+//  }
 }

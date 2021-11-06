@@ -9,7 +9,7 @@ import soc.moves2.SOCState.{SOCState, SOCStateOps}
 import soc.moves2._
 import util.MapWrapper
 
-case class BuildRoadMove(player: Int, edge: Edge) extends PerfectInformationSOCMove
+case class BuildRoadMove(player: Int, edge: Edge) extends PerfectInformationSOCMove[BuildRoadMove]
 
 case class SOCRoadMap(m: Map[Edge, Road]) extends MapWrapper[Edge, Road]
 
@@ -66,14 +66,16 @@ object RoadSOCState {
       canDoAction(state, inv, move.player) && state.canBuildRoad(move)
   }
 
-  implicit def applyMoveResult[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], STATE <: HList](implicit dep: DependsOn[STATE, SOCRoadMap :: SOCState[BOARD, II, PERSPECTIVE]], roadBoardOps: RoadBoardOps[BOARD, II, PERSPECTIVE, STATE], cost: Cost[II, BuildRoadMove]): ApplyMoveResult[BOARD, II, PERSPECTIVE, BuildRoadMove, STATE] = (s, m) =>
-    s.buildRoad(m, Some(cost.getCost))
-
-  type BASE_NEXT_MOVES[W[_ <: SOCMoveResult]] = W[BuildSettlementMove] :: W[BuildRoadMove] :: W[BuildCityMove] :: W[EndTurnMove] :: HNil // TODO add full list
-  implicit def baseNextMoves[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], W[_ <: SOCMoveResult], A <: HList, STATE <: HList](implicit ws: Selector[A, W[BuildRoadMove]], sa: SelectAll[A, BASE_NEXT_MOVES[W]]): NextMove[BOARD, II, PERSPECTIVE, W, A, STATE, BuildRoadMove] = (a: A) => {
-    val func = (_: STATE, r: BuildRoadMove) => Map(r.player -> sa.apply(a).toList)
-    ws.apply(a) -> func
+  implicit def updateState[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], STATE <: HList](implicit dep: DependsOn[STATE, SOCRoadMap :: SOCState[BOARD, II, PERSPECTIVE]], roadBoardOps: RoadBoardOps[BOARD, II, PERSPECTIVE, STATE], cost: Cost[II, BuildRoadMove]) = new UpdateState[BOARD, II, PERSPECTIVE, BuildRoadMove, STATE] {
+    override def apply(t: STATE, u: BuildRoadMove): STATE =  t.buildRoad(u, Some(cost.getCost))
   }
+
+
+//  type BASE_NEXT_MOVES[W[_ <: SOCMoveResult]] = W[BuildSettlementMove] :: W[BuildRoadMove] :: W[BuildCityMove] :: W[EndTurnMove] :: HNil // TODO add full list
+//  implicit def baseNextMoves[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], W[_ <: SOCMoveResult], A <: HList, STATE <: HList](implicit ws: Selector[A, W[BuildRoadMove]], sa: SelectAll[A, BASE_NEXT_MOVES[W]]): NextMove[BOARD, II, PERSPECTIVE, W, A, STATE, BuildRoadMove] = (a: A) => {
+//    val func = (_: STATE, r: BuildRoadMove) => Map(r.player -> sa.apply(a).toList)
+//    ws.apply(a) -> func
+//  }
 
   //  implicit def applyMoveResult[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], STATE[B, I, P] <: HList](implicit dep: DependsOn[STATE[BOARD, II, PERSPECTIVE], SOCRoadMap ::: SOCState[BOARD, II, PERSPECTIVE]], roadBoardOps: RoadBoardOps[STATE[BOARD, II, PERSPECTIVE]], cost: Cost[II, BuildRoadMove]): ApplyMoveResult[BuildRoadMove, STATE[BOARD, II, PERSPECTIVE]] = (s, m) =>
   //    s.buildRoad(m, Some(cost.getCost))

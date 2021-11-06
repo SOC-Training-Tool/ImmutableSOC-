@@ -8,119 +8,30 @@ import soc.inventory.resources.{Gain, Lose, SOCTransactions}
 import soc.inventory.{InventoryItem, PerfectInfoInventory, _}
 import util.MapWrapper
 
-//case class GameAction[
-//  R <: SOCMoveResult,
-//  II <: InventoryItem,
-//  PerfectInfo <: PerfectInfoInventory[II, PerfectInfo],
-//  STATE <: HList](implicit moveGenerator: MoveGenerator[STATE, PerfectInfo, R#A], canDoAction: CanDoAction[STATE, PerfectInfo, R#A], canDoMove: CanDoMove[STATE, PerfectInfo, R#A]) {
-//
-//  final def getAllMovesForState(state: STATE, inv: PerfectInfo, pos: Int): Seq[R#A] = {
-//    if (canDoAction(state, inv, pos))
-//      moveGenerator.getAllMoves(state, inv, pos).filter(canDoMove(state, inv, _))
-//    else Nil
-//  }
-//}
+case class GameActionMove[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo, STATE <: HList, R <: SOCMoveResult](private val gameAction: GameAction[BOARD, II, PERSPECTIVE, PerfectInfo, STATE, R], move: R#A) {
+  def getMove: SOCMove = move
+  def canDoMove(state: STATE, perfectInfo: PerfectInfo): Boolean = gameAction.canDoMove(state, perfectInfo, move)
+  def applyMove(state: STATE): (SOCMoveResult, STATE) = gameAction.applyMove(state, move) //NOTE for imperfect info moves results will not e consistent
+}
 
-//case class GameAction[R <: SOCMoveResult]()
+trait GameAction[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo, STATE <: HList, R <: SOCMoveResult] {
+  def canDoAction(state: STATE, inv: PerfectInfo, pos: Int): Boolean
 
-trait GameActionListBuilder[Actions <: HList,
-  II <: InventoryItem,
-  PerfectInfo <: PerfectInfoInventory[II, PerfectInfo],
-  STATE <: HList] extends DepFn0 { type Out <: HList }
+  def canDoMove(state: STATE, inv: PerfectInfo, move: R#A): Boolean
 
-object GameActionListBuilder {
+  def getAllMoves(state: STATE, inv: PerfectInfo, pos: Int): Seq[R#A]
 
-  type Aux[Actions <: HList,
-    II <: InventoryItem,
-    PerfectInfo <: PerfectInfoInventory[II, PerfectInfo],
-    STATE <: HList,
-    Out0] = GameActionListBuilder[Actions, II, PerfectInfo, STATE] { type Out = Out0 }
-
-  implicit def builder[R <: SOCMoveResult,
-    T <: HList,
-    II <: InventoryItem,
-    PerfectInfo <: PerfectInfoInventory[II, PerfectInfo],
-    STATE <: HList](implicit moveGenerator: MoveGenerator[STATE, PerfectInfo, R#A],
-                    canDoAction: CanDoAction[STATE, PerfectInfo, R#A],
-                    canDoMove: CanDoMove[STATE, PerfectInfo, R#A],
-                    builder: GameActionListBuilder[T, II, PerfectInfo, STATE]
-                   ): Aux[R :: T, II, PerfectInfo, STATE, GameAction[R] :: builder.Out] = {
-    new GameActionListBuilder[R :: T, II, PerfectInfo, STATE] {
-      type Out = GameAction[R] :: builder.Out
-      override def apply(): GameAction[R] :: builder.Out = ???
-    }
+  final def getAllMovesForState(state: STATE, inv: PerfectInfo, pos: Int): Seq[GameActionMove[BOARD, II, PERSPECTIVE, PerfectInfo, STATE, R]] = {
+    if (canDoAction(state, inv, pos)) getAllMoves(state, inv, pos).filter(canDoMove(state, inv, _)).map(m => GameActionMove(this, m))
+    else Nil
   }
 
-
+  def applyMove(state: STATE, move: R#A): (R, STATE)
 }
 
 
 
-trait GameResult[BOARD <: BoardConfiguration, II <: InventoryItem, STATE[B, I, P] <: HList, A <: SOCMove] {
-
-}
-
-trait GetGameActions[MOVES <: HList, STATE <: HList] {
-  type Out <: HList
-
-  def apply: Out
-}
-
-object GetGameActions {
-  type Aux[Ms <: HList, STATE <: HList, Out0 <: HList] = GetGameActions[Ms, STATE] {type Out = Out0}
-
-  def apply[Ms <: HList, STATE <: HList](implicit gga: GetGameActions[Ms, STATE]) = gga
-
-  implicit def getGameActions[A, T <: HList, STATE <: HList](implicit ev: A <:< SOCMove, getGameActions: GetGameActions[T, STATE], gameAction: GameAction.Move[STATE, A]): GetGameActions.Aux[A :: T, STATE, GameAction.Move[STATE, A] :: getGameActions.Out] = {
-    new GetGameActions[A :: T, STATE] {
-      override type Out = GameAction.Move[STATE, A] :: getGameActions.Out
-
-      override def apply: Out = gameAction :: getGameActions.apply
-    }
-  }
-
-  implicit def getNil: Aux[HNil, _, HNil] = {
-    new GetGameActions[HNil, _] {
-      override type Out = HNil
-
-      override def apply: Out = HNil
-    }
-  }
-}
-
-case class GameActionMove[BOARD <: BoardConfiguration, II <: InventoryItem, STATE[B, I, P] <: HList, GA <: GameAction[BOARD, II, STATE, GA]](action: GA, move: GA#A) {
-  def getMoveResult[I <: InventoryHelper[II, I]](state: STATE[BOARD, II, I])(implicit moveResultProvider: MoveResultProvider[BOARD, II, STATE, GA#A, GA#R]): GameActionMoveResult[BOARD, II, STATE, GA] = GameActionMoveResult[BOARD, II, STATE, GA](action, moveResultProvider.getMoveResult(move, state))
-
-}
-
-case class GameActionMoveResult[BOARD <: BoardConfiguration, II <: InventoryItem, STATE[B, I, P] <: HList, GA <: GameAction[BOARD, II, STATE, GA]](action: GA, moveResult: GA#R) {
-  val move: GameActionMove[BOARD, II, STATE, GA] = GameActionMove[BOARD, II, STATE, GA](action, moveResult.move.getMove)
-}
-
-//trait GameAction[BOARD <: BoardConfiguration, II <: InventoryItem, STATE[B, I, P] <: HList, GA <: GameAction[BOARD, II, STATE, GA]] { this: GA =>
-//  type A <: SOCMove
-//  type R <: SOCMoveResult[A]
-//  type OpsImplicits[P <: InventoryHelper[II, P]]
-//
-//  implicit def moveResultProvider: MoveResultProvider[BOARD, II, STATE, A, R]
-//
-//  def canDoAction[PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo]](state: STATE[BOARD, II, PERSPECTIVE], inv: PerfectInfo, position: Int)(implicit ops: OpsImplicits[PERSPECTIVE]): Boolean
-//
-//  def getAllMoves[PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo]](state: STATE[BOARD, II, PERSPECTIVE], inv: PerfectInfo, position: Int)(implicit ops: OpsImplicits[PERSPECTIVE]): Seq[GA#A]
-//
-//  final def getAllPossibleMovesForState[PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo]](state: STATE[BOARD, II, PERSPECTIVE], inv: PerfectInfo, position: Int)(implicit ops: OpsImplicits[PERSPECTIVE]): Seq[GameActionMove[BOARD, II, STATE, GA]] = {
-//    if (canDoAction(state, inv, position)) getAllMoves(state, inv, position).map(GameActionMove[BOARD, II, STATE, GA](this, _)) else Nil
-//  }
-//}
-
-trait PerfectInformationMoveGameAction[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], PerfectInfo <: PerfectInfoInventory[II, PerfectInfo], STATE[B, I, P] <: HList] extends GameAction[BOARD, II, PERSPECTIVE, PerfectInfo, STATE] {
-  override type A <: PerfectInformationSOCMove[A]
-  override type R = A
-
-  //override implicit val moveResultProvider: MoveResultProvider[BOARD, II, STATE, A, R] = MoveResultProvider.perfectInformationMoveProvider[BOARD, II, STATE, A]
-}
-
-trait MoveResultProvider[S, M <: SOCMove] {
+trait MoveResultProvider[BOARD, II, PERSPECTIVE, S, M <: SOCMove] {
   type R <: SOCMoveResult.Move[M]
 
   def getMoveResult(move: M, state: S): R
@@ -128,17 +39,20 @@ trait MoveResultProvider[S, M <: SOCMove] {
 
 object MoveResultProvider {
 
-  def perfectInformationMoveProvider[BOARD <: BoardConfiguration, II <: InventoryItem, STATE[B, I, P] <: HList, M <: PerfectInformationSOCMove]: MoveResultProvider[BOARD, II, STATE, M, M] = new MoveResultProvider[BOARD, II, STATE, M, M] {
-    override def getMoveResult[I <: Inventory[II, I]](move: M, state: STATE[BOARD, II, I]): M = move
-  }
+  type Aux[B, I, P, S, R0 <: SOCMoveResult] = MoveResultProvider[B, I, P, S, R0#A] { type R = R0 }
 
-  implicit class MoveResultProviderTransformer[BOARD <: BoardConfiguration, II <: InventoryItem, STATE[B, I, P] <: HList, A <: SOCMove[A], R <: SOCMoveResult[A]](a: MoveResultProvider[BOARD, II, STATE, A, R]) {
-    def transform[T <: SOCMove[T], TR <: SOCMoveResult[T]](f: T => A, h: R => TR): MoveResultProvider[BOARD, II, STATE, T, TR] = new MoveResultProvider[BOARD, II, STATE, T, TR] {
-      override def getMoveResult[I <: InventoryHelper[II, I]](move: T, state: STATE[BOARD, II, I]): TR = {
-        h(a.getMoveResult[I](f(move), state))
-      }
-    }
+  implicit def perfectInformationMoveProvider[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], STATE <: HList, M <: PerfectInformationSOCMove[M]]: Aux[BOARD, II, PERSPECTIVE, STATE, M] = new MoveResultProvider[BOARD, II, PERSPECTIVE, STATE, M] {
+    override type R = M
+    override def getMoveResult(move: M, state: STATE): R = move
   }
+//
+//  implicit class MoveResultProviderTransformer[BOARD <: BoardConfiguration, II <: InventoryItem, STATE[B, I, P] <: HList, A <: SOCMove[A], R <: SOCMoveResult[A]](a: MoveResultProvider[BOARD, II, STATE, A, R]) {
+//    def transform[T <: SOCMove[T], TR <: SOCMoveResult[T]](f: T => A, h: R => TR): MoveResultProvider[BOARD, II, STATE, T, TR] = new MoveResultProvider[BOARD, II, STATE, T, TR] {
+//      override def getMoveResult[I <: InventoryHelper[II, I]](move: T, state: STATE[BOARD, II, I]): TR = {
+//        h(a.getMoveResult[I](f(move), state))
+//      }
+//    }
+//  }
 
 }
 
