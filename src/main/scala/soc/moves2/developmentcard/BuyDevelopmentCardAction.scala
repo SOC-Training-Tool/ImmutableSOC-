@@ -1,11 +1,12 @@
 package soc.moves2.developmentcard
 
-import shapeless.{HList, ::}
+import shapeless.{::, HList}
 import soc.board.BoardConfiguration
 import soc.inventory._
-import soc.moves2.SOCState.SOCState
+import soc.state.SOCState.SOCState
 import soc.moves2._
 import soc.moves2.build.{BuildCityMove, CityBoardOps, SOCCityMap}
+import util.DependsOn
 
 case class BuyDevelopmentCardMove(player: Int) extends SOCMove
 
@@ -46,7 +47,7 @@ case class SOCDevelopmentCardsInDeck(d: Int)
 object DevelopmentCardSOCState {
   //implicit def fieldGenerator[BOARD <: BoardConfiguration, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE]](numCards: Int):  SOCStateFieldGenerator[BOARD, Resource, PERSPECTIVE, BaseGameSOCState[BOARD, PERSPECTIVE], SOCDevelopmentCardsInDeck] = { case(_, _) => SOCDevelopmentCardsInDeck(numCards)}
 
-  import SOCState.SOCStateOps
+  import soc.state.SOCState.SOCStateOps
 
   implicit class DevelopmentCardSOCStateOps[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: DevelopmentCardInventoryHelper[II, PERSPECTIVE], STATE[B, I, P] <: HList](state: STATE[BOARD, II, PERSPECTIVE])(implicit dep: DependsOn[STATE[BOARD, II, PERSPECTIVE], SOCDevelopmentCardsInDeck :: SOCState[BOARD, II, PERSPECTIVE]]) {
 

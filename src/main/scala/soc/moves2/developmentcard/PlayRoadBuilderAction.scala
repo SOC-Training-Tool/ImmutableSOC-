@@ -3,9 +3,9 @@ package soc.moves2.developmentcard
 import soc.board.{BoardConfiguration, CatanBoard, Edge}
 import soc.inventory.{DevelopmentCard, Inventory, InventoryHelper, InventoryItem, PerfectInfoInventory, Resource, RoadBuilder, YearOfPlenty}
 import soc.moves.RoadBuilderMove
-import soc.moves2.{MoveResultProvider, PerfectInformationMoveGameAction, PerfectInformationSOCMove, SOCMove, SOCMoveResult, SOCState}
+import soc.moves2.{MoveResultProvider, PerfectInformationMoveGameAction, PerfectInformationSOCMove, SOCMove, SOCMoveResult}
 import soc.moves2.build.{BuildRoadAction, BuildRoadMove, RoadSOCState}
-import soc.state.GameState
+import soc.state.{GameState, SOCState}
 
 case class PlayRoadBuilderMove(player: Int, road1: Edge, road2: Option[Edge]) extends PerfectPlayDevelopmentCardMove[PlayRoadBuilderMove] {
   override def card: DevelopmentCard = RoadBuilder

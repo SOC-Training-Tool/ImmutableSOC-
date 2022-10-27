@@ -43,6 +43,16 @@ trait Inventory[II <: InventoryItem, T <: Inventory[II, T]] { self: T =>
 //
 //
 
+//object Inventory {
+//
+//  type PerfectInfoInventory[II <: InventoryItem] =
+//
+//}
+
+
+
+
+
 trait PerfectInfoInventory[II <: InventoryItem, T <: PerfectInfoInventory[II, T]] extends Inventory [II, T]  { self: T =>
 
   override type UpdateRes = List[SOCTransactions[II]]

@@ -4,7 +4,7 @@ import soc.board.BoardConfiguration
 import soc.inventory.InventoryHelper.{PublicInfoInv, PublicInvHelper}
 import soc.inventory.SimpleInventoryHelper._
 import soc.inventory.resources.SOCTransactions
-import soc.moves2.{SOCState}
+import soc.state.SOCState
 
 trait InventoryHelper[II <: InventoryItem, T <: InventoryHelper[II, T]] { this: T =>
   type INV <: Inventory[II, INV]

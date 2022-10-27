@@ -1,9 +1,15 @@
-package soc.moves2.build
+package soc.state.build
 
-import shapeless.{::, HList}
+import shapeless.{HList, ::}
 import soc.board.{BoardConfiguration, Edge, Vertex}
 import soc.inventory.{EdgeBuilding, InventoryHelper, InventoryItem, VertexBuilding}
-import soc.moves2.{DependsOn, SOCState}
+import soc.moves2.build._
+import soc.state.build._
+import scala.{:: => :#:}
+import soc.state._
+
+import soc.state.SOCState
+import util.DependsOn
 
 import scala.collection.immutable.{:: => :#:}
 
@@ -15,7 +21,7 @@ trait BoardOps[B, I, P, S] {
 object BoardOps {
 
   import CitySOCState._
-  import LongestRoadSOCState._
+  import soc.state.LongestRoadSOCState._
   import RoadSOCState._
   import SOCState._
   import SettlementSOCState._

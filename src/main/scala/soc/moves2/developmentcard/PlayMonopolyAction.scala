@@ -4,8 +4,8 @@ import soc.board.BoardConfiguration
 import soc.inventory.resources.ResourceSet.Resources
 import soc.inventory.resources.{Gain, Lose, ResourceSet}
 import soc.inventory.{DevelopmentCard, Inventory, InventoryHelper, Monopoly, PerfectInfoInventory, Resource}
-import soc.moves2.{MoveResultProvider, SOCMove, SOCMoveResult, SOCState}
-import soc.state.GameState
+import soc.moves2.{MoveResultProvider, SOCMove, SOCMoveResult}
+import soc.state.{GameState, SOCState}
 
 case class PlayMonopolyMove(player: Int, res: Resource) extends PlayDevelopmentCardMove[PlayMonopolyMove] {
   override def card: DevelopmentCard = Monopoly

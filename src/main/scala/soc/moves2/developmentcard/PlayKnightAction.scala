@@ -4,10 +4,11 @@ import shapeless.{::, HList}
 import soc.board.BoardConfiguration
 import soc.inventory._
 import soc.moves2.MoveResultProvider.MoveResultProviderTransformer
-import soc.moves2.SOCState.SOCState
+import soc.state.SOCState.SOCState
 import soc.moves2._
-import soc.moves2.build.BoardOps
-import util.MapWrapper
+import soc.state.SOCPlayerPointsMap
+import soc.state.build.BoardOps
+import util.{DependsOn, MapWrapper}
 
 case class PlayKnightMove(robberMove: RobberMove) extends PlayDevelopmentCardMove {
   override def player: Int = robberMove.player
@@ -40,7 +41,7 @@ object LargestArmySOCState {
 //  implicit def largestArmyPlayerFG[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE], STATE <: LargestArmySOCState[BOARD, PERSPECTIVE, STATE]]: SOCStateFieldGenerator[BOARD, Resource, PERSPECTIVE, STATE, SOCLargestArmyPlayer] = {case(_,_) => SOCLargestArmyPlayer(None)}
 //  implicit def knightCountFG[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[Resource, PERSPECTIVE], STATE <: LargestArmySOCState[BOARD, PERSPECTIVE, STATE]]: SOCStateFieldGenerator[BOARD, Resource, PERSPECTIVE, STATE, SOCNumKnights] = {case(_,p) => SOCNumKnights(p.map(i => i -> 0).toMap)}
 
-  import SOCState.SOCStateOps
+  import soc.state.SOCState.SOCStateOps
 
   implicit class LargestArmySOCState[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], STATE[B, I, P] <: HList](state: STATE[BOARD, II, PERSPECTIVE])(implicit dep: DependsOn[STATE[BOARD, II, PERSPECTIVE], SOCLargestArmyPlayer :: SOCNumKnights :: SOCState[BOARD, II, PERSPECTIVE]]) {
 

@@ -1,6 +1,6 @@
 package util
 
-import shapeless.ops.hlist.Selector
+import shapeless.ops.hlist.{Selector, ToTraversable}
 import shapeless.{::, DepFn0, DepFn1, HList, HNil}
 
 object hlist {
@@ -35,24 +35,32 @@ object hlist {
 
   trait WrappedSelectAll[F, W[_ <: F], WL <: HList, SL <: HList] extends DepFn1[WL] {
     type Out <: HList
+    def traversable(t: WL): Seq[W[_ <: F]]
   }
 
   object WrappedSelectAll {
 
-    type Aux[F, W[_ <: F], WL <: HList, SL <: HList, Out0] = WrappedSelectAll[F, W, WL, SL] {type Out = Out0}
+    type Aux[F, W[_ <: F], WL <: HList, SL <: HList, Out0 <: HList] = WrappedSelectAll[F, W, WL, SL] {type Out = Out0}
 
     implicit def wrappedSelectAll[F, W[_ <: F], WL <: HList, H <: F, T <: HList](implicit s: Selector[WL, W[H]], wsa: WrappedSelectAll[F, W, WL, T]): Aux[F, W, WL, H :: T, W[H] :: wsa.Out] = new WrappedSelectAll[F, W, WL, H :: T] {
       override type Out = W[H] :: wsa.Out
 
       override def apply(t: WL): Out = s.apply(t) :: wsa.apply(t)
+
+      override def traversable(t: WL): Seq[W[_ <: F]] = s.apply(t) +: wsa.traversable(t)
+
+
     }
 
     implicit def hNil[F, W[_ <: F], WL <: HList]: Aux[F, W, WL, HNil, HNil] = new WrappedSelectAll[F, W, WL, HNil] {
       override type Out = HNil
 
       override def apply(t: WL): Out = HNil
+
+      override def traversable(t: WL): Seq[W[_ <: F]] = Nil
     }
 
   }
+
 
 }

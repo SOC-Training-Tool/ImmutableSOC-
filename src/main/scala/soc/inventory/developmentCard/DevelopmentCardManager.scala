@@ -11,7 +11,7 @@ object DevelopmentCardSet {
   def apply[T: Numeric](devMap: Map[DevelopmentCard, T]): DevelopmentCardSet[T] = CatanSet.fromMap(devMap)
   def apply(cards: DevelopmentCard*): DevelopmentCardSet[Int] = CatanSet.fromList(cards.toSeq)
 
-  val fullBank = DevelopmentCardSet[Int](19, 19, 19, 19, 19)
+  val fullBank = DevelopmentCardSet[Int](14, 5, 2, 2, 2)
   def empty[T: Numeric]: DevelopmentCardSet[T] = CatanSet.empty[DevelopmentCard, T]
 
   implicit def toDevelopmentCardSet(specifications: DevelopmentCardSpecificationSet): DevelopmentCardSet[Int] = DevelopmentCardSet(specifications.toList:_*)

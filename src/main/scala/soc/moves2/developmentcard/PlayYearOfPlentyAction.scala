@@ -3,7 +3,8 @@ package soc.moves2.developmentcard
 import shapeless.HList
 import soc.board.BoardConfiguration
 import soc.inventory.{DevelopmentCard, InventoryHelper, PerfectInfoInventory, Resource, YearOfPlenty}
-import soc.moves2.{EndTurnMove, MoveGenerator, MoveResultProvider, PerfectInformationMoveGameAction, PerfectInformationSOCMove, SOCState}
+import soc.moves2.{EndTurnMove, MoveGenerator, MoveResultProvider, PerfectInformationMoveGameAction, PerfectInformationSOCMove}
+import soc.state.SOCState
 
 case class PlayYearOfPlentyMove(player: Int, res1: Resource, res2: Resource) extends PerfectPlayDevelopmentCardMove[PlayYearOfPlentyMove] {
   override def card: DevelopmentCard = YearOfPlenty

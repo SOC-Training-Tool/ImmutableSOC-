@@ -55,7 +55,11 @@ case class CatanBoard[T <: BoardConfiguration] (
   neighboringVertices: Map[Vertex, Seq[Vertex]],
   adjacentHexes: Map[Vertex, Seq[BoardHex]],
   portMap: Map[Edge, Port]) {
-  lazy val numberHexes: Map[Int, Seq[BoardHex]] = hexesWithNodes.groupBy(_.hex.getNumber)
+  lazy val numberHexes: Map[Int, Seq[BoardHex]] = hexesWithNodes
+    .flatMap(h => h.hex.getNumber.map(n => (n.number, h)))
+    .groupBy(_._1)
+    .view.mapValues(_.map(_._2))
+    .toMap
 }
 
 object CatanBoard {
