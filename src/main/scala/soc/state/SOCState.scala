@@ -9,6 +9,7 @@ import soc.moves2.SOCMoveResult
 import util.{DependsOn, MapWrapper}
 
 case class SOCTurn(t: Int)
+
 case class SOCPlayerPointsMap(m: Map[Int, Int]) extends MapWrapper[Int, Int]
 
 object SOCState {
@@ -89,7 +90,7 @@ trait UpdateStateAll[B <: BoardConfiguration, I <: InventoryItem, P <: Inventory
 
 object UpdateState {
 
-  private def addToPartial[U, V, A <: U: Typeable](pf: PartialFunction[U, V])(f: A => V): PartialFunction[U, V] = {
+  private def addToPartial[U, V, A <: U : Typeable](pf: PartialFunction[U, V])(f: A => V): PartialFunction[U, V] = {
     val aType = TypeCase[A]
     val func: PartialFunction[U, V] = {
       case aType(a) => f(a)
@@ -98,7 +99,7 @@ object UpdateState {
     func
   }
 
-  def build[B <: BoardConfiguration, I <: InventoryItem, P <: InventoryHelper[I, P], MOVE_RESULTS <: HList, STATE <: HList](implicit usa: UpdateStateAll[B, I, P, MOVE_RESULTS, STATE]) = usa.apply()
+  def build[B <: BoardConfiguration, I <: InventoryItem, P <: InventoryHelper[I, P], MOVE_RESULTS <: HList, STATE <: HList](implicit usa: UpdateStateAll[B, I, P, MOVE_RESULTS, STATE]): PartialFunction[(STATE, SOCMoveResult), STATE] = usa.apply()
 
   implicit def updater[B <: BoardConfiguration, I <: InventoryItem, P <: InventoryHelper[I, P], R <: SOCMoveResult, T <: HList, STATE <: HList](implicit ev: Typeable[(R, STATE)], us: UpdateState[B, I, P, R, STATE], usa: UpdateStateAll[B, I, P, T, STATE]): UpdateStateAll[B, I, P, R :: T, STATE] = new UpdateStateAll[B, I, P, R :: T, STATE] {
 
@@ -110,7 +111,7 @@ object UpdateState {
     }
   }
 
-  implicit def hnil[B <: BoardConfiguration, I <: InventoryItem, P <: InventoryHelper[I, P], STATE <: HList] = new UpdateStateAll[B, I, P, HNil, STATE] {
+  implicit def hnil[B <: BoardConfiguration, I <: InventoryItem, P <: InventoryHelper[I, P], STATE <: HList]: UpdateStateAll[B, I, P, HNil, STATE] = new UpdateStateAll[B, I, P, HNil, STATE] {
     override def apply(): PartialFunction[(STATE, SOCMoveResult), STATE] = PartialFunction.empty
   }
 }

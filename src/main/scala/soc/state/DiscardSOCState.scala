@@ -8,7 +8,6 @@ import util.DependsOn
 
 case class SOCPlayersToDiscard(players: List[Int])
 
-
 object DiscardSOCState {
 
   implicit class SOCDiscardStateOps[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], STATE <: HList](state: STATE)(implicit dep: DependsOn[STATE, SOCPlayersToDiscard :: SOCState[BOARD, II, PERSPECTIVE]]) {
