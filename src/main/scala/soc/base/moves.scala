@@ -54,7 +54,7 @@ case class RobPlayer[II <: InventoryItem](player: Int, res: Option[II])
 case class RobberMoveResult[II <: InventoryItem](player: Int, robberLocation: Int, cardStole: Option[RobPlayer[II]]) extends SOCMoveResult {
   override type A = RobberMove[II]
   override def move: RobberMove[II] = RobberMove(player, robberLocation, cardStole.map(_.player))
-  override def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, SOCMoveResult] = playerIds.map {
+  override def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, RobberMoveResult[II]] = playerIds.map {
     case `player` => player -> this
     case p if cardStole.fold(false)(_.player == p) => p -> this
     case p => p -> RobberMoveResult[II](player, robberLocation, cardStole.map(_.copy(res = None)))
