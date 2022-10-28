@@ -5,6 +5,7 @@ trait MapWrapper[K, V] {
 
   def contains(k: K) = m.contains(k)
   def get(k: K) = m.get(k)
+  def getOrElse(k: K, v: V) = m.getOrElse(k, v)
   def apply(k: K) = m(k)
   def -(k: K) = m - k
   def +(kv: (K, V)) = m + kv

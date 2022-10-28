@@ -5,10 +5,13 @@ import soc.board.{Edge, Vertex}
 import soc.inventory.{City, Road, Settlement}
 import util.{DependsOn, MapWrapper}
 
+case class SOCTurn(t: Int)
+case class SOCPlayerPointsMap(m: Map[Int, Int]) extends MapWrapper[Int, Int]
+
 case class SOCCanRollDice(b: Boolean)
 
-case class SOCRobberLocation(v: Int)
 case class SOCPlayersToDiscard(players: List[Int])
+case class SOCRobberLocation(v: Int)
 
 case class SOCSettlementMap(m: Map[Vertex, Settlement]) extends MapWrapper[Vertex, Settlement]
 case class SOCRoadMap(m: Map[Edge, Road]) extends MapWrapper[Edge, Road]
