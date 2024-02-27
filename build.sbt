@@ -1,11 +1,13 @@
 
 name := "ImmutableSOC"
 organization := "io.github.soc-training-tool"
-scalaVersion := "2.13.0"
+scalaVersion := "2.13.4"
 description := "Library for Immutable Settlers of Catan."
 
 libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.8"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % "test"
+libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.10"
+
 
 
 inThisBuild(List(
