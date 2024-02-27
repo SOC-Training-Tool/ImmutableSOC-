@@ -10,7 +10,7 @@ val akkatyped = "com.typesafe.akka" %% "akka-actor-typed" % "2.5.23"
 libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.8"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % "test"
 libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.3"
-libraryDependencies += "dev.zio" %% "zio" % "2.0.5"
+libraryDependencies += "dev.zio" %% "zio" % "2.0.13"
 libraryDependencies ++= Seq(akkatest, akka, akkatyped)
 
 //inThisBuild(List(

@@ -1,6 +1,7 @@
 package soc.inventory.resources
 
 import ResourceSet._
+import shapeless.Coproduct
 import soc.inventory.{CatanSet, InventoryItem, Resource}
 
 import scala.annotation.tailrec
@@ -81,8 +82,8 @@ object SOCPossibleHands {
 
 }
 
-sealed trait SOCTransactions[II <: InventoryItem]
+sealed trait SOCTransactions[II <: Coproduct]
 
-case class Gain[II <: InventoryItem](playerId: Int, resourceSet: CatanSet[II, Int]) extends SOCTransactions[II]
-case class Lose[II <: InventoryItem](playerId: Int, resourceSet: CatanSet[II, Int]) extends SOCTransactions[II]
-case class Steal[II <: InventoryItem](robber: Int, victim: Int, resourceSet: Option[CatanSet[II, Int]]) extends SOCTransactions[II]
+case class Gain[II <: Coproduct](playerId: Int, resourceSet: CatanSet[II, Int]) extends SOCTransactions[II]
+case class Lose[II <: Coproduct](playerId: Int, resourceSet: CatanSet[II, Int]) extends SOCTransactions[II]
+case class Steal[II <: Coproduct](robber: Int, victim: Int, resourceSet: Option[CatanSet[II, Int]]) extends SOCTransactions[II]

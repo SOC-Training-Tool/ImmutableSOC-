@@ -1,4 +1,89 @@
-//package soc.gametype
+package soc.gametype
+
+import shapeless.ops.{coproduct, hlist}
+import shapeless.{:+:, ::, CNil, Coproduct, HList, HNil, Poly, Poly2}
+import soc.base.SOCCityMap
+import soc.board.Vertex
+import soc.gametype.Foo.game2
+import soc.gametype.GameAction.Aux
+import soc.inventory.{City, Settlement}
+import soc.moves2.build.{BuildCityMove, BuildSettlementMove}
+import soc.state.build.SOCSettlementMap
+import util.DependsOn
+
+trait GameAction {
+
+  type STATE <: HList
+  type MOVE
+
+  def doMove[GAME_STATE <: HList](move: MOVE, state: GAME_STATE)(implicit dep: DependsOn[GAME_STATE, STATE]): GAME_STATE
+
+  object ActionPoly extends Poly2 {
+    implicit def default[S <: HList](implicit dep: DependsOn[S, STATE]) =
+      at[MOVE, S](doMove)
+  }
+}
+
+object GameAction {
+  type Aux[S <: HList, M] = GameAction {
+    type STATE = S
+    type MOVE = M
+  }
+}
+
+class SOCGame[ACTIONS <: HList, STATE <: HList, MOVES <: Coproduct, P <: Poly](actions: ACTIONS, p: P) {
+
+  def doMove(move: MOVES, state: STATE)(implicit zipConst: coproduct.ZipConst[STATE, MOVES]): DoMoveApply[zipConst.Out] = {
+    DoMoveApply(move.zipConst(state))
+  }
+
+  private case class DoMoveApply[C <: Coproduct](c: C) {
+    def apply()(implicit folder: coproduct.Folder.Aux[P, C, STATE]) =
+    c.fold(p)
+  }
+
+  def addAction[S <: HList, M](action: GameAction.Aux[S, M])(implicit unionH: hlist.Union[STATE, S]) = {
+    val p2 = p.compose(action.ActionPoly)
+    new SOCGame[GameAction.Aux[S, M] :: ACTIONS, unionH.Out, M :+: MOVES, p2.type](action :: actions, p2)
+  }
+
+}
+
+object Foo {
+
+  class SettleAction extends GameAction {
+    override type STATE = SOCSettlementMap :: HNil
+    override type MOVE = BuildSettlementMove
+
+    override def doMove[GAME_STATE <: HList](move: MOVE, state: GAME_STATE)(implicit dep: DependsOn[GAME_STATE, STATE]): GAME_STATE = {
+      val settlements = dep.get[SOCSettlementMap](state)
+      dep.update(SOCSettlementMap(settlements + (move.vertex -> Settlement(move.player))), state)
+    }
+  }
+
+  class CityAction extends GameAction {
+
+    override type STATE = SOCCityMap :: HNil
+    override type MOVE = BuildCityMove
+
+    override def doMove[GAME_STATE <: HList](move: MOVE, state: GAME_STATE)(implicit dep: DependsOn[GAME_STATE, STATE]): GAME_STATE = {
+      val cities = dep.get[SOCCityMap](state)
+      dep.update(SOCCityMap(cities + (move.vertex -> City(move.player))), state)
+    }
+
+  }
+
+  val game = new SOCGame[HNil, HNil, CNil, Poly2](HNil, Poly2.build)
+  val game1 = game.addAction(new SettleAction)
+  val game2 = game1.addAction(new CityAction)
+
+  val foo = game2.doMove(Coproduct(BuildCityMove(1, Vertex(1))), SOCSettlementMap(Map.empty) :: SOCCityMap(Map.empty) :: HNil)
+  val foo2 = foo.apply
+
+}
+
+
+
 //
 //import shapeless.ops.hlist.{Selector, ToTraversable}
 //import shapeless.{::, DepFn1, HList, HNil}

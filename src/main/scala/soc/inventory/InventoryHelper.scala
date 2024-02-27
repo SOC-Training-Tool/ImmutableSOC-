@@ -1,12 +1,13 @@
 package soc.inventory
 
+import shapeless.Coproduct
 import soc.board.BoardConfiguration
 import soc.inventory.InventoryHelper.{PublicInfoInv, PublicInvHelper}
 import soc.inventory.SimpleInventoryHelper._
 import soc.inventory.resources.SOCTransactions
 import soc.state.SOCState
 
-trait InventoryHelper[II <: InventoryItem, T <: InventoryHelper[II, T]] { this: T =>
+trait InventoryHelper[II <: Coproduct, T <: InventoryHelper[II, T]] { this: T =>
   type INV <: Inventory[II, INV]
   type PUBLIC <: PublicInvHelper[II, PUBLIC, INV#PUBLIC]
   def playerInventories: Map[Int, INV]
@@ -15,13 +16,13 @@ trait InventoryHelper[II <: InventoryItem, T <: InventoryHelper[II, T]] { this: 
 }
 
 object SimpleInventoryHelper {
-  type SimpleInventory[II <: InventoryItem, I <: Inventory[II, I], P <: PublicInfoInventory[II, P]] = Inventory[II, I] {
+  type SimpleInventory[II <: Coproduct, I <: Inventory[II, I], P <: PublicInfoInventory[II, P]] = Inventory[II, I] {
     type UpdateRes = List[SOCTransactions[II]]
     type PUBLIC = P
   }
 }
 
-case class SimpleInventoryHelper[II <: InventoryItem, PI <: SimpleInventory[II, PI, PI], I <: SimpleInventory[II, I, PI]](
+case class SimpleInventoryHelper[II <: Coproduct, PI <: PublicInfoInv[II], I <: SimpleInventory[II, I, PI]](
   playerInventories: Map[Int, I]
 ) extends InventoryHelper[II, SimpleInventoryHelper[II, PI, I]] {
   override type INV = I
@@ -33,7 +34,7 @@ case class SimpleInventoryHelper[II <: InventoryItem, PI <: SimpleInventory[II, 
   override def toPublic: PUBLIC = SimpleInventoryHelper[II, PI, PI](playerInventories.map{ case (p, i) => p -> i.toPublicInventory})
 }
 
-trait InventoryHelperFactory[II <: InventoryItem, H <: InventoryHelper[II, H]] {
+trait InventoryHelperFactory[II <: Coproduct, H <: InventoryHelper[II, H]] {
   def create(playerList: List[Int]): H
 }
 
@@ -41,22 +42,22 @@ object InventoryHelper {
 
   //implicit def fieldGenerator[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], STATE <: SOCState[BOARD, II, PERSPECTIVE, STATE]](implicit inventoryHelperFactory: InventoryHelperFactory[II, PERSPECTIVE]): SOCStateFieldGenerator[BOARD, II, PERSPECTIVE, STATE, PERSPECTIVE] = { case(_, players) => inventoryHelperFactory.create(players) }
 
-  type PerfectInvHelper[II <: InventoryItem, P <: InventoryHelper[II, P]] = InventoryHelper[II, P] {
+  type PerfectInvHelper[II <: Coproduct, P <: InventoryHelper[II, P]] = InventoryHelper[II, P] {
     type INV <: PerfectInfoInventory[II, INV]
   }
 
-  private type PublicInvHelper[II <: InventoryItem, PUBLIC <: InventoryHelper[II, PUBLIC], PUBLIC_INV] = InventoryHelper[II, PUBLIC] {type INV = PUBLIC_INV}
+  private type PublicInvHelper[II <: Coproduct, PUBLIC <: InventoryHelper[II, PUBLIC], PUBLIC_INV] = InventoryHelper[II, PUBLIC] {type INV = PUBLIC_INV}
 
-  type PerfectInfoInv[II <: InventoryItem] = SimpleInventoryHelper[II, PublicInfoInventoryImpl[II], PerfectInfoInventoryImpl[II]]
-  type PublicInfoInv[II <: InventoryItem] = SimpleInventoryHelper[II, PublicInfoInventoryImpl[II], PublicInfoInventoryImpl[II]]
+  type PerfectInfoInv[II <: Coproduct] = SimpleInventoryHelper[II, PublicInfoInventoryImpl[II], PerfectInfoInventoryImpl[II]]
+  type PublicInfoInv[II <: Coproduct] = SimpleInventoryHelper[II, PublicInfoInventoryImpl[II], PublicInfoInventoryImpl[II]]
 
-  implicit def perfectInfoInvFactory[II <: InventoryItem]: InventoryHelperFactory[II, PerfectInfoInv[II]] = { players =>
+  implicit def perfectInfoInvFactory[II <: Coproduct]: InventoryHelperFactory[II, PerfectInfoInv[II]] = { players =>
     SimpleInventoryHelper[II, PublicInfoInventoryImpl[II], PerfectInfoInventoryImpl[II]](
       players.map (_ -> PerfectInfoInventoryImpl(CatanSet.empty[II, Int])).toMap
     )
   }
 
-  implicit def publicInfoInvFactory[II <: InventoryItem]: InventoryHelperFactory[II, PublicInfoInv[II]] = { players =>
+  implicit def publicInfoInvFactory[II <: Coproduct]: InventoryHelperFactory[II, PublicInfoInv[II]] = { players =>
     SimpleInventoryHelper[II, PublicInfoInventoryImpl[II], PublicInfoInventoryImpl[II]](
       players.map(_ -> PublicInfoInventoryImpl[II](0)).toMap
     )

@@ -6,13 +6,14 @@ import soc.base.state._
 import soc.board.{BoardConfiguration, Vertex}
 import soc.core.Cost
 import soc.core.SOCState._
+import soc.inventory.Resource.{BRICK, Resource, SHEEP, WHEAT, WOOD}
 import soc.inventory.resources.{Gain, Lose, ResourceSet}
 import soc.inventory._
 import util.{DependsOn, UpdateState}
 
 object BuildSettlementAction {
 
-  implicit val cost: Cost[Resource, BuildSettlementMove] = Cost.apply(ResourceSet.apply(Wood, Brick, Wheat, Sheep))
+  implicit val cost: Cost[Resource, BuildSettlementMove] = Cost.apply(ResourceSet.apply(WOOD, BRICK, WHEAT, SHEEP))
 
   implicit def updateState[BOARD <: BoardConfiguration, II <: InventoryItem, PERSPECTIVE <: InventoryHelper[II, PERSPECTIVE], STATE <: HList](implicit dep: DependsOn[STATE, SOCSettlementMap :: SOCState[BOARD, II, PERSPECTIVE]], cost: Cost[II, BuildSettlementMove]): UpdateState[BOARD, II, PERSPECTIVE, BuildSettlementMove, STATE] = new UpdateState[BOARD, II, PERSPECTIVE, BuildSettlementMove, STATE] {
 

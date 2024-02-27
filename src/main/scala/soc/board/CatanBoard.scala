@@ -49,12 +49,34 @@ case class Edge(v1: Vertex, v2: Vertex) extends BuildingLocation {
 
 case class CatanBoard[T <: BoardConfiguration] (
   hexesWithNodes: Seq[BoardHex],
-  vertices: Seq[Vertex],
-  edges: Seq[Edge],
-  edgesFromVertex: Map[Vertex, Seq[Edge]],
-  neighboringVertices: Map[Vertex, Seq[Vertex]],
-  adjacentHexes: Map[Vertex, Seq[BoardHex]],
   portMap: Map[Edge, Port]) {
+
+  val vertices: Seq[Vertex] = hexesWithNodes.flatMap(_.vertices).distinct
+  val edges: Seq[Edge] = hexesWithNodes.flatMap { hex =>
+    val vertices = hex.vertices
+    vertices.zip(vertices.tail ::: List(vertices.head)).map { case (v1, v2) => Edge(v1, v2) }
+  }.distinct
+
+  val edgesFromVertex: Map[Vertex, Seq[Edge]] = vertices.map { vertex =>
+    vertex -> edges.flatMap {
+      case Edge(`vertex`, v) => Seq(Edge(`vertex`, v))
+      case Edge(v, `vertex`) => Seq(Edge(v, `vertex`))
+      case _ => Nil
+    }
+  }.toMap
+
+  val neighboringVertices: Map[Vertex, Seq[Vertex]] = vertices.map { vertex =>
+    vertex -> edgesFromVertex(vertex).flatMap {
+      case Edge(`vertex`, v) => Seq(v)
+      case Edge(v, `vertex`) => Seq(v)
+      case _ => Nil
+    }
+  }.toMap.view.mapValues(_.distinct).toMap
+
+  val adjacentHexes: Map[Vertex, Seq[BoardHex]] = vertices.map { vertex =>
+    vertex -> hexesWithNodes.filter(_.vertices.contains(vertex))
+  }.toMap
+
   lazy val numberHexes: Map[Int, Seq[BoardHex]] = hexesWithNodes
     .flatMap(h => h.hex.getNumber.map(n => (n.number, h)))
     .groupBy(_._1)
@@ -73,40 +95,6 @@ object CatanBoard {
       BoardHex(node, hex, vertexMap(node))
     }
     CatanBoard(hexesWithNodes, portMap)
-  }
-
-  def apply[T <: BoardConfiguration](
-    hexesWithNodes: Seq[BoardHex],
-    portMap: Map[Edge, Port]
-  ): CatanBoard[T] = {
-
-    val vertices: Seq[Vertex] = hexesWithNodes.flatMap(_.vertices).distinct
-    val edges: Seq[Edge] = hexesWithNodes.flatMap { hex =>
-      val vertices = hex.vertices
-      vertices.zip(vertices.tail ::: List(vertices.head)).map { case (v1, v2) => Edge(v1, v2) }
-    }.distinct
-
-    val edgesFromVertex: Map[Vertex, Seq[Edge]] = vertices.map { vertex =>
-      vertex -> edges.flatMap {
-        case Edge(`vertex`, v) => Seq(Edge(`vertex`, v))
-        case Edge(v, `vertex`) => Seq(Edge(v, `vertex`))
-        case _ => Nil
-      }
-    }.toMap
-
-    val neighboringVertices: Map[Vertex, Seq[Vertex]] = vertices.map { vertex =>
-      vertex -> edgesFromVertex(vertex).flatMap {
-        case Edge(`vertex`, v) => Seq(v)
-        case Edge(v, `vertex`) => Seq(v)
-        case _ => Nil
-      }
-    }.toMap.view.mapValues(_.distinct).toMap
-
-    val adjacentHexes: Map[Vertex, Seq[BoardHex]] = vertices.map { vertex =>
-      vertex -> hexesWithNodes.filter(_.vertices.contains(vertex))
-    }.toMap
-
-    CatanBoard(hexesWithNodes, vertices, edges, edgesFromVertex, neighboringVertices, adjacentHexes, portMap)
   }
 
   def checkValid[T <: BoardConfiguration](board: CatanBoard[T])(implicit boardRules: BoardRules[T]): Boolean = {

@@ -18,6 +18,7 @@ object LongestRoadSOCState {
 
     val longestRoadPlayer: SOCLongestRoadPlayer = dep.get(state)
     val roadLengths: SOCRoadLengths = dep.get(state)
+
     def updateLongestRoadPlayer(player: SOCLongestRoadPlayer): STATE = {
       val playerPoints = state.playerPoints
       val s = (longestRoadPlayer.player, player.player) match {
@@ -28,25 +29,35 @@ object LongestRoadSOCState {
       }
       dep.update(player, s)
     }
-    def updateRoadLengths: STATE = updateRoadLengths(SOCRoadLengths(state.playerIds.foldLeft(Map.empty[Int, Int]) { case (m, p) => m + (p -> calcLongestRoadLength(p))}))
+    def updateRoadLengths(): STATE = updateRoadLengths(calcLongestRoadLengths)
     def updateRoadLengths(player: Int): STATE = updateRoadLengths(SOCRoadLengths((roadLengths - player) + (player -> calcLongestRoadLength(player))))
     def updateRoadLengths(roadLengths: SOCRoadLengths): STATE = dep.update(roadLengths, state)
 
-    def redistributeLongestRoad(player: Int): STATE = {
-      val ur = state.updateRoadLengths(player)
-      val (longestRoadLength, longRoadPlayers) = ur.playerIds
-        .map(p => (p, ur.roadLengths(p)))
+
+    def redistributeLongestRoad(playerId: Int): STATE = {
+      state.updateRoadLengths(playerId).updateLongestRoad()
+    }
+
+    def redistributeLongestRoad(): STATE = {
+      state.updateRoadLengths().updateLongestRoad()
+    }
+
+    private def updateLongestRoad(): STATE = {
+      val (longestRoadLength, longRoadPlayers) = state.playerIds
+        .map(p => (p, state.roadLengths(p)))
         .groupBy(_._2)
         .maxBy(_._1)
-      val longestRoadPlayer = ur.longestRoadPlayer.player.flatMap(p => ur.roadLengths.get(p).map(p -> _))
+      val longestRoadPlayer = this.longestRoadPlayer.player.flatMap(p => state.roadLengths.get(p).map(p -> _))
       (longestRoadPlayer.map(_._2), longRoadPlayers.map(_._1)) match {
-        case (_, _) if longestRoadLength < 5 => ur.updateLongestRoadPlayer(SOCLongestRoadPlayer(None))
-        case (None, p :: Nil) => ur.updateLongestRoadPlayer(SOCLongestRoadPlayer(Some(p)))
-        case (Some(lr), _) if lr == longestRoadLength => ur
-        case (Some(_), p :: Nil) => ur.updateLongestRoadPlayer(SOCLongestRoadPlayer(Some(p)))
-        case (Some(_), _ :: _ :: _) => ur.updateLongestRoadPlayer(SOCLongestRoadPlayer(None))
+        case (_, _) if longestRoadLength < 5 => state.updateLongestRoadPlayer(SOCLongestRoadPlayer(None))
+        case (None, p :: Nil) => state.updateLongestRoadPlayer(SOCLongestRoadPlayer(Some(p)))
+        case (Some(lr), _) if lr == longestRoadLength => state
+        case (Some(_), p :: Nil) => state.updateLongestRoadPlayer(SOCLongestRoadPlayer(Some(p)))
+        case (Some(_), _ :: _ :: _) => state.updateLongestRoadPlayer(SOCLongestRoadPlayer(None))
       }
     }
+
+    def calcLongestRoadLengths(): SOCRoadLengths = SOCRoadLengths(state.playerIds.foldLeft(Map.empty[Int, Int]) { case (m, p) => m + (p -> calcLongestRoadLength(p))})
 
     def calcLongestRoadLength(playerId: Int): Int = {
       val edges = boardOps.edgeBuildingMap(state).toSeq.flatMap {

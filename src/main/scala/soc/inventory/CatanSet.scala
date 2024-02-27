@@ -1,6 +1,8 @@
 package soc.inventory
 
-case class CatanSet[A <: InventoryItem, T] protected(amountMap: Map[A, T])(implicit num: Numeric[T]) {
+import shapeless.Coproduct
+
+case class CatanSet[A <: Coproduct, T] protected(amountMap: Map[A, T])(implicit num: Numeric[T]) {
 
   val getTotal = num.toInt(amountMap.values.sum)
   val getTypes: Seq[A] = amountMap.keys.toSeq
@@ -53,15 +55,15 @@ case class CatanSet[A <: InventoryItem, T] protected(amountMap: Map[A, T])(impli
 
 object CatanSet {
 
-  def empty[A <: InventoryItem, T: Numeric] = CatanSet(Map.empty[A, T])
+  def empty[A <: Coproduct, T: Numeric] = CatanSet(Map.empty[A, T])
 
-  implicit def toList[A <: InventoryItem](set: CatanSet[A, Int]): Seq[A] = set.amountMap.toList.flatMap { case (a, amt) => (1 to amt).map(_ => a)}
-  implicit def fromMap[A <: InventoryItem, T: Numeric](invMap: Map[A, T]): CatanSet[A, T] = {
+  implicit def toList[A <: Coproduct](set: CatanSet[A, Int]): Seq[A] = set.amountMap.toList.flatMap { case (a, amt) => (1 to amt).map(_ => a)}
+  implicit def fromMap[A <: Coproduct, T: Numeric](invMap: Map[A, T]): CatanSet[A, T] = {
     val numeric = implicitly[Numeric[T]]
     CatanSet(invMap.filter{ case(_, t) => numeric.gt(t, numeric.zero) }.toMap)
   }
-  implicit def fromList[A <: InventoryItem](list: Seq[A]): CatanSet[A, Int] = fromMap(list.groupBy(f => f).view.mapValues(_.length).toMap)
-  implicit def sum[A <: InventoryItem, T: Numeric](sets: Seq[CatanSet[A, T]]): CatanSet[A, T] = sets.foldLeft(empty[A, T]){case (x, y) => x.add(y) }
+  implicit def fromList[A <: Coproduct](list: Seq[A]): CatanSet[A, Int] = fromMap(list.groupBy(f => f).view.mapValues(_.length).toMap)
+  implicit def sum[A <: Coproduct, T: Numeric](sets: Seq[CatanSet[A, T]]): CatanSet[A, T] = sets.foldLeft(empty[A, T]){case (x, y) => x.add(y) }
 
 }
 

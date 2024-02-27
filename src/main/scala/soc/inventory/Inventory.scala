@@ -1,11 +1,12 @@
 package soc.inventory
 
+import shapeless.Coproduct
 import soc.inventory.developmentCard._
 import soc.inventory.developmentCard.DevelopmentCardSet._
 import soc.inventory.resources._
 import soc.inventory.resources.ResourceSet.{ResourceSet, Resources}
 
-trait Inventory[II <: InventoryItem, T <: Inventory[II, T]] { self: T =>
+trait Inventory[II <: Coproduct, T <: Inventory[II, T]] { self: T =>
 
   type UpdateRes
   type PUBLIC <: PublicInfoInventory[II, PUBLIC]
@@ -53,7 +54,7 @@ trait Inventory[II <: InventoryItem, T <: Inventory[II, T]] { self: T =>
 
 
 
-trait PerfectInfoInventory[II <: InventoryItem, T <: PerfectInfoInventory[II, T]] extends Inventory [II, T]  { self: T =>
+trait PerfectInfoInventory[II <: Coproduct, T <: PerfectInfoInventory[II, T]] extends Inventory [II, T]  { self: T =>
 
   override type UpdateRes = List[SOCTransactions[II]]
 
@@ -72,13 +73,13 @@ trait PerfectInfoInventory[II <: InventoryItem, T <: PerfectInfoInventory[II, T]
       case (newSet, _) => newSet
   })
 }
-case class PerfectInfoInventoryImpl[II <: InventoryItem](itemSet: CatanSet[II, Int]) extends PerfectInfoInventory[II, PerfectInfoInventoryImpl[II]] {
+case class PerfectInfoInventoryImpl[II <: Coproduct](itemSet: CatanSet[II, Int]) extends PerfectInfoInventory[II, PerfectInfoInventoryImpl[II]] {
   override type PUBLIC = PublicInfoInventoryImpl[II]
   override def updateSet(itemSet: CatanSet[II, Int]): PerfectInfoInventoryImpl[II] = copy(itemSet = itemSet)
   override def toPublicInventory: PUBLIC = PublicInfoInventoryImpl(numCards)
 }
 
-trait PublicInfoInventory[II <: InventoryItem, T <: PublicInfoInventory[II, T]] extends Inventory[II, T] { self: T =>
+trait PublicInfoInventory[II <: Coproduct, T <: PublicInfoInventory[II, T]] extends Inventory[II, T] { self: T =>
   override type UpdateRes = List[SOCTransactions[II]]
   override def canSpend(resSet: CatanSet[II, Int]): Boolean = numCards > resSet.getTotal
 
@@ -92,7 +93,7 @@ trait PublicInfoInventory[II <: InventoryItem, T <: PublicInfoInventory[II, T]] 
     case (num, _) => num
   })
 }
-case class PublicInfoInventoryImpl[II <: InventoryItem](numCards: Int) extends PublicInfoInventory[II, PublicInfoInventoryImpl[II]] {
+case class PublicInfoInventoryImpl[II <: Coproduct](numCards: Int) extends PublicInfoInventory[II, PublicInfoInventoryImpl[II]] {
   override type PUBLIC = PublicInfoInventoryImpl[II]
   override def updateNumCards(numCards: Int): PublicInfoInventoryImpl[II] = copy(numCards)
   override def toPublicInventory: PUBLIC = this

@@ -49,7 +49,7 @@ object SOCState {
       playerIds.dropRight(numPlayers - indexOf).lastOption.getOrElse(playerIds.max)
     }
 
-    lazy val incrementTurn: STATE = updateTurns(turn + 1)
+    def incrementTurn: STATE = updateTurns(turn + 1)
 
     def updateTransactions(transactions: List[SOCTransactions[II]]): STATE = {
       def isBankTransaction(t: SOCTransactions[II]) = t match {
@@ -71,4 +71,11 @@ object SOCState {
       modifier.apply(state, f)
     }
   }
+}
+
+object ZSOCState {
+
+
+
+
 }
