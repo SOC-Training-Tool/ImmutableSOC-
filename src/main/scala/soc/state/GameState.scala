@@ -1,7 +1,7 @@
 package soc.state
 
 import soc.board._
-import soc.core._
+import soc.core.{GameRules, Roll}
 import soc.inventory.Inventory.PublicInfo
 import soc.inventory._
 import soc.inventory.resources.ResourceSet._

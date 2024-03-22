@@ -1,5 +1,6 @@
 package soc.board
 
+import shapeless.Coproduct
 import soc.core.Roll
 import soc.inventory._
 import soc.inventory.resources.ResourceSet
@@ -24,7 +25,6 @@ case object Desert extends Hex {
   override val getNumber: Option[Roll] = None
 }
 
-
 case class BoardHex(
   node: Int,
   hex: Hex,
@@ -47,6 +47,9 @@ case class Edge(v1: Vertex, v2: Vertex) {
 
   override def hashCode: Int = (v1.node * v1.node) + (v2.node * v2.node)
 }
+
+
+
 
 case class CatanBoard private(
   hexesWithNodes: Seq[BoardHex],

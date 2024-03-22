@@ -8,11 +8,19 @@ trait DependsOn[S, D <: HList] {
 
   def update[T](t: T, s: S)(implicit replacer: Replacer.Aux[D, T, T, (T, D)]): S
 
+  def updateWith[T](s: S)(f: T => T)(implicit selector: Selector[D, T], replacer: Replacer.Aux[D, T, T, (T, D)]): S = {
+    update(f(get[T](s)), s)
+  }
+
+  def getAll(s: S): D
+
   def updateAll(s: S)(f: D => D): S
 
 }
 
 object DependsOn {
+
+  def single[L <: HList](implicit dependsOn: DependsOn[L, L]) = dependsOn
 
   def apply[S <: HList, D <: HList](implicit dependsOn: DependsOn[S, D]): DependsOn[S, D] = dependsOn
 
@@ -23,6 +31,8 @@ object DependsOn {
     override def update[T](t: T, s: S)(implicit replacer: Replacer.Aux[D, T, T, (T, D)]): S = {
       updateAll(s)(d => replacer.apply(d, t)._2)
     }
+
+    override def getAll(s: S): D = ra.apply(s)._1
 
     override def updateAll(s: S)(f: D => D): S = {
       val (d, rem) = ra.apply(s)
@@ -52,6 +62,8 @@ object DependsOn {
         }
         dp.update(t, s)
       }
+
+      override def getAll(s: S): D1 = inner.getAll(dp.getAll(s))
 
       override def updateAll(s: S)(f: D1 => D1): S = dp.updateAll(s)(d => inner.updateAll(d)(f))
     }

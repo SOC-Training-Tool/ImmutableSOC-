@@ -1,5 +1,7 @@
 package game
 
+import game.GameMoveResult.{Aux, PAux}
+
 trait GameMove {
   type R <: GameMoveResult
 
@@ -10,18 +12,24 @@ trait GameMoveResult {
   type A <: GameMove
 
   def move: A
-  def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, GameMoveResult.Move[A]]
+}
+
+trait PerfectInfoMoveResult extends GameMoveResult {
+  type ImperfectInfoMoveResult <: Aux[A]
+  def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, ImperfectInfoMoveResult]
+
 }
 
 object GameMoveResult {
-  type Move[M <: GameMove] = GameMoveResult {type A = M}
+  type Aux[M <: GameMove] = GameMoveResult {type A = M}
+  type PAux[M <: GameMove] = PerfectInfoMoveResult {type A = M}
 }
 
-trait PerfectInformationGameMove[A0 <: GameMove] extends GameMove with GameMoveResult {
+trait PerfectInformationGameMove[A0 <: GameMove with PerfectInformationGameMove[A0]] extends GameMove with PerfectInfoMoveResult {
   self: A0 =>
-  type A = A0
-  type R = A0
+  override type A = A0
+  override type ImperfectInfoMoveResult = A0
 
-  def move: A = self
-  def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, GameMoveResult.Move[A]] = playerIds.map(id => id -> this).toMap
+  override def move: A = self
+  override def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, ImperfectInfoMoveResult] = playerIds.map(id => id -> self).toMap
 }

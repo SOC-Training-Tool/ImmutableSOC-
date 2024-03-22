@@ -2,7 +2,7 @@ package game
 
 import shapeless.Coproduct
 
-case class InventorySet[A <: Coproduct, T] protected(amountMap: Map[A, T])(implicit num: Numeric[T]) {
+case class InventorySet[A, T] protected(amountMap: Map[A, T])(implicit num: Numeric[T]) {
 
   lazy val getTotal: Int = num.toInt(amountMap.values.sum)
   lazy val getTypes: Seq[A] = amountMap.keys.toSeq
@@ -55,15 +55,15 @@ case class InventorySet[A <: Coproduct, T] protected(amountMap: Map[A, T])(impli
 
 object InventorySet {
 
-  def empty[A <: Coproduct, T: Numeric] = InventorySet(Map.empty[A, T])
+  def empty[A, T: Numeric] = InventorySet(Map.empty[A, T])
 
-  implicit def toList[A <: Coproduct](set: InventorySet[A, Int]): Seq[A] = set.amountMap.toList.flatMap { case (a, amt) => (1 to amt).map(_ => a)}
-  implicit def fromMap[A <: Coproduct, T: Numeric](invMap: Map[A, T]): InventorySet[A, T] = {
+  implicit def toList[A](set: InventorySet[A, Int]): Seq[A] = set.amountMap.toList.flatMap { case (a, amt) => (1 to amt).map(_ => a)}
+  implicit def fromMap[A, T: Numeric](invMap: Map[A, T]): InventorySet[A, T] = {
     val numeric = implicitly[Numeric[T]]
     InventorySet(invMap.filter{ case(_, t) => numeric.gt(t, numeric.zero) })
   }
-  implicit def fromList[A <: Coproduct](list: Seq[A]): InventorySet[A, Int] = fromMap(list.groupBy(f => f).view.mapValues(_.length).toMap)
-  implicit def sum[A <: Coproduct, T: Numeric](sets: Seq[InventorySet[A, T]]): InventorySet[A, T] = sets.foldLeft(empty[A, T]){case (x, y) => x.add(y) }
+  implicit def fromList[A](list: Seq[A]): InventorySet[A, Int] = fromMap(list.groupBy(f => f).view.mapValues(_.length).toMap)
+  implicit def sum[A, T: Numeric](sets: Seq[InventorySet[A, T]]): InventorySet[A, T] = sets.foldLeft(empty[A, T]){case (x, y) => x.add(y) }
 
 }
 
