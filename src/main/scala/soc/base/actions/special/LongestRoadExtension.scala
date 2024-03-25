@@ -2,9 +2,11 @@ package soc.base.actions.special
 
 import game.ActionExtension
 import shapeless.{::, Coproduct, HNil}
-import soc.base.actions.SOCBoard
 import soc.base.state.ops._
-import soc.base.state.{EdgeBuildingState, LongestRoadOps, PlayerPoints, SOCLongestRoadPlayer, SOCRoadLengths, VertexBuildingState}
+import soc.base.state.{LongestRoadOps, SOCLongestRoadPlayer, SOCRoadLengths}
+import soc.core.SOCBoard
+import soc.core.state.ops.PointsOps
+import soc.core.state.{EdgeBuildingState, PlayerPoints, VertexBuildingState}
 import util.DependsOn
 
 object LongestRoadExtension {

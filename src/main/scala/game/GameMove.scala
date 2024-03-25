@@ -1,6 +1,6 @@
 package game
 
-import game.GameMoveResult.{Aux, PAux}
+import game.GameMoveResult.{Aux}
 
 trait GameMove {
   type R <: GameMoveResult
@@ -22,7 +22,7 @@ trait PerfectInfoMoveResult extends GameMoveResult {
 
 object GameMoveResult {
   type Aux[M <: GameMove] = GameMoveResult {type A = M}
-  type PAux[M <: GameMove] = PerfectInfoMoveResult {type A = M}
+  type PAux[M <: GameMove, R <: Aux[M]] = PerfectInfoMoveResult {type ImperfectInfoMoveResult = R}
 }
 
 trait PerfectInformationGameMove[A0 <: GameMove with PerfectInformationGameMove[A0]] extends GameMove with PerfectInfoMoveResult {

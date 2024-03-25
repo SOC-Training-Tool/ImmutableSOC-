@@ -1,13 +1,13 @@
 package soc.base
 
 import shapeless.Coproduct
-import soc.base.actions.{BoardHex, Hex, SOCBoard}
-import soc.board.Vertex
-import soc.core.Resource
+import soc.core.{BoardHex, Hex, Resource, SOCBoard, Vertex}
 
-case class BaseBoard[Res <: Coproduct](hexes: List[Hex[Res]])
+case class BaseBoard[Res](hexes: List[Hex[Res]])
 
 object BaseBoard {
+
+  val basePortEdges = Seq((0, 1), (3, 4), (7, 8), (10, 11), (13, 14), (17, 18), (20, 21), (23, 34), (27, 28))
 
   val baseVertexMap: Map[Int, List[Int]] = Map(
     0 -> List(0, 1, 2, 31, 30, 29),

@@ -3,60 +3,16 @@ package soc.base.state
 import game.InventorySet
 import shapeless.ops.coproduct
 import shapeless.{:+:, ::, CNil, Coproduct, HList, HNil, Poly1}
-import soc.base.actions.{BoardHex, SOCBoard}
-import soc.base.{BuildCityMove, BuildRoadMove, BuildSettlementMove}
-import soc.board.{Edge, Vertex}
-import soc.core.{City, Road, Settlement, VertexBuildingValue}
-import soc.inventory.ResourceInventories
-import soc.inventory.Transactions.{Gain, Lose, PerfectInfo}
+import soc.core.ResourceInventories.ResourceInventoriesOp
+import soc.core.SOCBoard.SOCBoardOps
+import soc.core.Transactions.{Gain, Lose, PerfectInfo}
+import soc.core.state._
+import soc.core.state.ops._
+import soc.core.{BoardHex, City, Edge, ResourceInventories, Road, SOCBoard, Settlement, Vertex, VertexBuildingValue}
 import util.DependsOn
 import util.opext.Embedder
-import ResourceInventories.ResourceInventoriesOp
-import SOCBoard.SOCBoardOps
 
 object ops {
-
-  implicit class TurnOps[STATE <: HList](state: STATE)(implicit dep: DependsOn[STATE, Turn :: HNil]) {
-    val turn: Int = dep.get[Turn](state).t
-
-    def incrementTurn: STATE = dep.update(Turn(turn + 1), state)
-  }
-
-  implicit class PointsOps[STATE <: HList](state: STATE)(implicit dep: DependsOn[STATE, PlayerPoints :: HNil]) {
-    val playerPoints: Map[Int, Int] = dep.get[PlayerPoints](state).points
-
-    def incrementPointForPlayer(player: Int): STATE =
-      dep.update(PlayerPoints(playerPoints + (player -> (playerPoints.getOrElse(player, 0) + 1))), state)
-
-    def decrementPointForPlayer(player: Int): STATE =
-      dep.update(PlayerPoints(playerPoints + (player -> (playerPoints.getOrElse(player, 0) - 1))), state)
-  }
-
-  implicit class BankOps[Res, STATE <: HList](state: STATE)(implicit dep: DependsOn[STATE, Bank[Res] :: HNil]) {
-    val bank: InventorySet[Res, Int] = dep.get[Bank[Res]](state).b
-
-    def addToBank(set: InventorySet[Res, Int]): STATE = dep.update(Bank(bank.add(set)), state)
-
-    def subtractFromBank(set: InventorySet[Res, Int]): STATE = dep.update(Bank(bank.subtract(set)), state)
-  }
-
-  implicit class BankInvOps[Res, Inv[_], STATE <: HList]
-  (state: STATE)
-  (implicit dep: DependsOn[STATE, Bank[Res] :: Inv[Res] :: HNil],
-   inv: ResourceInventories[Res, PerfectInfo[Res], Inv]) {
-
-    implicit val bankDep = dep.innerDependency[Bank[Res] :: HNil]
-
-    def payToBank(player: Int, set: InventorySet[Res, Int]): STATE = {
-      dep.updateWith[Inv[Res]](state)(_.update(Coproduct[PerfectInfo[Res]](Lose(player, set))))
-        .addToBank(set)
-    }
-
-    def getFromBank(player: Int, set: InventorySet[Res, Int]): STATE = {
-      dep.updateWith[Inv[Res]](state)(_.update(Coproduct[PerfectInfo[Res]](Gain(player, set))))
-        .subtractFromBank(set)
-    }
-  }
 
   implicit class BuildSettlementStateOps[VB <: Coproduct, STATE <: HList]
   (state: STATE)

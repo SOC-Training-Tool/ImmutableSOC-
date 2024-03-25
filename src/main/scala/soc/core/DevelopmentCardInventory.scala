@@ -1,9 +1,8 @@
-package soc.inventory
+package soc.core
 
 import game.StateInitializer
-import shapeless.{:+:, ::, CNil, Coproduct, HNil}
-import soc.core.PlayerIds
-import soc.inventory.DevTransactions.{ImperfectInfoBuyCard, PerfectInfoBuyCard}
+import soc.core.DevTransactions.{ImperfectInfoBuyCard, PerfectInfoBuyCard}
+import soc.core.state.PlayerIds
 
 trait BuyDevelopmentCard[T, Inv] {
   def apply(t: Inv, player: Int, turn: Int, transaction: T): Inv
@@ -73,16 +72,8 @@ object DevelopmentCardInventories {
         m + (player -> m.get(player).map {
           _.sortWith { case ((c1, t1), (c2, t2)) =>
             if (c1 == c2) t1 < t2 else c1 == card
-          }.tail
+          }.drop(1)
         }.getOrElse(Nil))
       }
     }
-
-  implicit def initPublicInv[Dev](implicit ids: PlayerIds) = new StateInitializer[PublicDevelopmentCards[Dev]] {
-    override def apply(): PublicDevelopmentCards[Dev] = ids.players.map(_ -> 0).toMap
-  }
-
-  implicit def initPrivateInv[Dev](implicit ids: PlayerIds) = new StateInitializer[PrivateDevelopmentCards[Dev]] {
-    override def apply(): PrivateDevelopmentCards[Dev] = ids.players.map(_ -> Seq.empty).toMap
-  }
 }

@@ -2,13 +2,12 @@ package soc.base.actions
 
 import game.{GameAction, InventorySet}
 import shapeless.{:+:, ::, CNil, Coproduct, HNil}
-import soc.base.InitialPlacementMove
-import soc.base.actions.SOCBoard.SOCBoardOps
-import soc.base.state.ops._
-import soc.base.state.{Bank, EdgeBuildingState, PlayerPoints, VertexBuildingState}
-import soc.core.{Road, Settlement}
-import soc.inventory.Transactions.PerfectInfo
-import soc.inventory.{ResourceInventories, Transactions}
+import soc.base.state.ops.{BuildRoadStateOps, BuildSettlementStateOps}
+import soc.core.SOCBoard.SOCBoardOps
+import soc.core.Transactions.PerfectInfo
+import soc.core.state.ops.BankInvOps
+import soc.core.state.{Bank, EdgeBuildingState, PlayerPoints, VertexBuildingState}
+import soc.core.{InitialPlacementMove, ResourceInventories, Road, SOCBoard, Settlement}
 import util.DependsOn
 import util.opext.Embedder
 

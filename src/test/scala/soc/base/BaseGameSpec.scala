@@ -3,13 +3,11 @@ package soc.base
 import game.InventorySet
 import org.scalatest.{FunSpec, Matchers}
 import shapeless.Coproduct
-import soc.actions.build.{BuildCityMove, BuildRoadMove, BuildSettlementMove}
-import soc.actions.developmentcards._
-import soc.actions._
-import soc.base.BaseGame.{DevelopmentCards, PerfectInfoMoves, PerfectInfoState}
-import soc.board.{Edge, Vertex}
+import soc.base.BaseGame.{DevelopmentCards, ImperfectInfoMoves, PerfectInfoMoves, PerfectInfoState, PublicInfoState}
+import soc.base.actions.developmentcards._
 import soc.core.Resources._
-import soc.core.{Resource, ResourceSet}
+import soc.core._
+import soc.core.state.PlayerPoints
 
 
 class BaseGameSpec extends FunSpec with Matchers {
@@ -37,14 +35,17 @@ class BaseGameSpec extends FunSpec with Matchers {
       ResourceHex(WHEAT, 11))
   )
 
-  type A = BaseGame.PerfectInfoState
-  
-  val initState: PerfectInfoState = BaseGame.perfectInfoInitialState(board, List(0, 1, 2, 3), InventorySet(Map(WOOD -> 19, BRICK -> 19, SHEEP -> 19, WHEAT -> 19, ORE -> 19)))
+  val initPerfectInfoState: PerfectInfoState =
+    BaseGame.initGame[PerfectInfoState](board, InventorySet(Map(WOOD -> 19, BRICK -> 19, SHEEP -> 19, WHEAT -> 19, ORE -> 19)), 25)
+
+  val initPublicInfoState: PublicInfoState =
+    BaseGame.initGame[PublicInfoState](board, InventorySet(Map(WOOD -> 19, BRICK -> 19, SHEEP -> 19, WHEAT -> 19, ORE -> 19)), 25)
+
 
   val testMoveResults: List[PerfectInfoMoves] = List(
     Coproduct[PerfectInfoMoves](InitialPlacementMove(Vertex(41), Edge(Vertex(40), Vertex(41)), true, 0)),
     Coproduct[PerfectInfoMoves](InitialPlacementMove(Vertex(34), Edge(Vertex(7), Vertex(34)), true, 1)),
-    Coproduct[PerfectInfoMoves](InitialPlacementMove(Vertex(44), Edge(Vertex(44), Vertex(45)), true , 2)),
+    Coproduct[PerfectInfoMoves](InitialPlacementMove(Vertex(44), Edge(Vertex(44), Vertex(45)), true, 2)),
     Coproduct[PerfectInfoMoves](InitialPlacementMove(Vertex(36), Edge(Vertex(9), Vertex(36)), true, 3)),
     Coproduct[PerfectInfoMoves](InitialPlacementMove(Vertex(31), Edge(Vertex(2), Vertex(31)), false, 3)),
     Coproduct[PerfectInfoMoves](InitialPlacementMove(Vertex(47), Edge(Vertex(30), Vertex(47)), false, 2)),
@@ -74,7 +75,7 @@ class BaseGameSpec extends FunSpec with Matchers {
     Coproduct[PerfectInfoMoves](EndTurnMove(1)),
     // 2
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(2, 9)),
-    Coproduct[PerfectInfoMoves](PortTradeMove(2, ResourceSet(WOOD, WOOD, WOOD,WOOD), ResourceSet(ORE))),
+    Coproduct[PerfectInfoMoves](PortTradeMove(2, ResourceSet(WOOD, WOOD, WOOD, WOOD), ResourceSet(ORE))),
     Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(2, Coproduct[DevelopmentCards](Point))),
     Coproduct[PerfectInfoMoves](BuildRoadMove(2, Edge(Vertex(24), Vertex(45)))),
     Coproduct[PerfectInfoMoves](EndTurnMove(2)),
@@ -232,7 +233,7 @@ class BaseGameSpec extends FunSpec with Matchers {
     Coproduct[PerfectInfoMoves](EndTurnMove(2)),
     // 3
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(3, 6)),
-    Coproduct[PerfectInfoMoves](PlayMonopolyMoveResult(3, WHEAT, Map(0 -> 6, 2-> 3))),
+    Coproduct[PerfectInfoMoves](PlayMonopolyMoveResult(3, WHEAT, Map(0 -> 6, 2 -> 3))),
     Coproduct[PerfectInfoMoves](PortTradeMove(3, ResourceSet(wh = 3), ResourceSet(or = 1))),
     Coproduct[PerfectInfoMoves](PortTradeMove(3, ResourceSet(wh = 3), ResourceSet(or = 1))),
     Coproduct[PerfectInfoMoves](PortTradeMove(3, ResourceSet(wh = 3), ResourceSet(or = 1))),
@@ -265,18 +266,32 @@ class BaseGameSpec extends FunSpec with Matchers {
     // 1
     Coproduct[PerfectInfoMoves](PerfectInfoPlayKnightResult[Resource](PerfectInfoRobberMoveResult(1, 7, Some(PlayerSteal(0, WHEAT))))))
 
-  val result = testMoveResults.foldLeft(initState) { case (s, m) => BaseGame.perfectInfoBaseGame(m, s) }
-  println(result)
+  val perfectResult = testMoveResults.foldLeft(initPerfectInfoState) { case (s, m) => BaseGame.perfectInfoBaseGame(m, s) }
+  println(perfectResult.select[PlayerPoints])
 
-//    RevealPoint,
-//    EndTurnMove,
-//    //2
-//    RevealPoint,
-//    EndTurnMove,
-//    //3
-//    RevealPoint,
-//    EndTurnMove,
-//    //0
-//    RevealPoint,
-//    EndTurnMove,
+  val transform = BaseGame.MoveTransformer()
+  val transformedMoves = testMoveResults.map(transform.apply) ::: List(
+    Coproduct[ImperfectInfoMoves](PlayPointMove(0)),
+    Coproduct[ImperfectInfoMoves](PlayPointMove(1)),
+    Coproduct[ImperfectInfoMoves](PlayPointMove(2)),
+    Coproduct[ImperfectInfoMoves](PlayPointMove(3)))
+
+
+  val publicResult = transformedMoves.foldLeft(initPublicInfoState) { case (s, m) => BaseGame.publicInfoBase(m, s)}
+  println(publicResult.select[PlayerPoints])
+
+
+
+
+  //    RevealPoint,
+  //    EndTurnMove,
+  //    //2
+  //    RevealPoint,
+  //    EndTurnMove,
+  //    //3
+  //    RevealPoint,
+  //    EndTurnMove,
+  //    //0
+  //    RevealPoint,
+  //    EndTurnMove,
 }

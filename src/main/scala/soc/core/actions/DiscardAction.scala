@@ -1,14 +1,12 @@
-package soc.base.actions
+package soc.core.actions
 
 import game.GameAction
 import shapeless.{::, HNil}
-import soc.base.DiscardMove
-import soc.base.state.Bank
-import soc.base.state.ops._
-import soc.inventory.ResourceInventories
-import soc.inventory.Transactions.PerfectInfo
+import soc.core.Transactions.PerfectInfo
+import soc.core.state.Bank
+import soc.core.state.ops._
+import soc.core.{DiscardMove, ResourceInventories}
 import util.DependsOn
-
 
 object DiscardAction {
 

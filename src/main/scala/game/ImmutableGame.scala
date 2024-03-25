@@ -1,11 +1,10 @@
 package game
 
 import game.ImmutableGame.FolderOp
-import shapeless.PolyDefns.Case0
 import shapeless.ops.coproduct.ZipConst
 import shapeless.ops.hlist.{FillWith, Union}
 import shapeless.ops.{coproduct, hlist}
-import shapeless.{:+:, ::, CNil, Coproduct, HList, HNil, Poly0, Poly1}
+import shapeless.{:+:, ::, CNil, Coproduct, Generic, HList, HNil, Poly0, Poly1}
 import util.DependsOn
 
 trait ImmutableGame[STATE <: HList, MOVES <: Coproduct] {
@@ -34,34 +33,30 @@ class ImmutableGameBuilder[Moves <: Coproduct, State <: HList, Actions0 <: HList
    zipper: coproduct.ZipWith.Aux[GameAction[M, S] :: Actions0, M :+: Moves, (M, GameAction[M, S]) :+: MoveActions0]
   ) = new ImmutableGameBuilder[M :+: Moves, union.Out, GameAction[M, S] :: Actions0, (M, GameAction[M, S]) :+: MoveActions0](action :: actionList)
 
-  final case class BuildApply[C <: Coproduct](zipConst: ZipConst.Aux[State, MoveActions0, C]) {
-    def apply(dummy: Boolean = false)(implicit moveFolder: coproduct.Folder.Aux[ImmutableGame.FolderOp.type, C, State]): ImmutableGame[State, Moves] = new ImmutableGame[State, Moves] {
-      override protected type Actions = Actions0
-      override protected type MoveActions = MoveActions0
-      override protected type StateMoveActions = C
-      override protected val actions: Actions = actionList
-      override protected implicit val moveZipper: coproduct.ZipWith.Aux[Actions, Moves, MoveActions] = zipper
-      override protected implicit val stateZipper: coproduct.ZipConst.Aux[State, MoveActions, StateMoveActions] = zipConst
-      override protected implicit val folder: coproduct.Folder.Aux[ImmutableGame.FolderOp.type, StateMoveActions, State] = moveFolder
-    }
-  }
-
   final case class MergeApply[M <: Coproduct, S <: HList, A <: HList, MA <: Coproduct](a: A) {
     def apply(dummy: Boolean = false)(implicit mergeZipper: coproduct.ZipWith.Aux[A, M, MA]) = new ImmutableGameBuilder[M, S, A, MA](a)
   }
 
-  def merge[M <: Coproduct, S <: HList, A <: HList, MA <: Coproduct]
+  def merge[M <: Coproduct, MO <: Coproduct, S <: HList, SO <: HList, A <: HList, AO <: HList, MA <: Coproduct, MAO <: Coproduct]
   (builder: ImmutableGameBuilder[M, S, A, MA])
-  (implicit mUnion: coproduct.ExtendLeftBy[Moves, M],
-   sUnion: hlist.Union[State, S],
-   prepend: hlist.Prepend[Actions0, A],
-   maExtend: coproduct.ExtendLeftBy[MoveActions0, MA]
-  ): MergeApply[mUnion.Out, sUnion.Out, prepend.Out, maExtend.Out] = {
-    new MergeApply[mUnion.Out, sUnion.Out, prepend.Out, maExtend.Out](prepend.apply(actionList, builder.actionList))
+  (implicit mUnion: coproduct.ExtendLeftBy.Aux[Moves, M, MO],
+   sUnion: hlist.Union.Aux[State, S, SO],
+   prepend: hlist.Prepend.Aux[Actions0, A, AO],
+   maExtend: coproduct.ExtendLeftBy.Aux[MoveActions0, MA, MAO],
+   mergeZipper: coproduct.ZipWith.Aux[AO, MO, MAO]
+  ): ImmutableGameBuilder[MO, SO, AO, MAO] = {
+    new ImmutableGameBuilder[MO, SO, AO, MAO](prepend.apply(actionList, builder.actionList))
   }
 
-  def build(implicit zipConst: ZipConst[State, MoveActions0]) = new BuildApply[zipConst.Out](zipConst)
-
+  def build[ZCO <: Coproduct](implicit zipConst: ZipConst.Aux[State, MoveActions0, ZCO], moveFolder: coproduct.Folder.Aux[ImmutableGame.FolderOp.type, ZCO, State]) = new ImmutableGame[State, Moves] {
+    override protected type Actions = Actions0
+    override protected type MoveActions = MoveActions0
+    override protected type StateMoveActions = ZCO
+    override protected val actions: Actions = actionList
+    override protected implicit val moveZipper: coproduct.ZipWith.Aux[Actions, Moves, MoveActions] = zipper
+    override protected implicit val stateZipper: coproduct.ZipConst.Aux[State, MoveActions, StateMoveActions] = zipConst
+    override protected implicit val folder: coproduct.Folder.Aux[ImmutableGame.FolderOp.type, StateMoveActions, State] = moveFolder
+  }
 }
 
 trait StateInitializer[T] extends shapeless.DepFn0 {
@@ -80,7 +75,19 @@ object ImmutableGame {
   }
 
   object InitializeOp extends Poly0 {
-    implicit def initializeState[A](implicit si: StateInitializer[A]): Case0[A] = at(si.apply())
+
+    implicit val initInt: Case0[Int] = at(0)
+    implicit val initDouble: Case0[Double] = at(0.0)
+    implicit val initString: Case0[String] = at("")
+    implicit def initList[A]: Case0[List[A]] = at(List.empty[A])
+    implicit def initMap[K, V]: Case0[Map[K, V]] = at(Map.empty[K, V])
+    implicit def initOpt[A]: Case0[Option[A]] = at(None)
+    implicit def initSet[A, T: Numeric]: Case0[InventorySet[A, T]] = at(InventorySet.empty[A, T])
+    implicit def initHList[L <: HList](implicit fill: FillWith[InitializeOp.type, L]): Case0[L] = at[L](HList.fillWith[L](InitializeOp))
+    implicit def initObj[A, Repr <: HList](implicit gen: Generic.Aux[A, Repr], c: Case0[Repr]): Case0[A] = at[A] {
+      gen.from(c.apply())
+
+    }
 
   }
 }

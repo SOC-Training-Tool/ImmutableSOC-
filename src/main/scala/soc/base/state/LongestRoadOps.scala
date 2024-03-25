@@ -1,9 +1,9 @@
 package soc.base.state
 
 import shapeless.Coproduct
-import soc.base.actions.SOCBoard
-import soc.base.actions.SOCBoard.SOCBoardOps
-import soc.board.{Edge, Vertex}
+import soc.core.{Edge, SOCBoard, Vertex}
+import soc.core.SOCBoard.SOCBoardOps
+import soc.core.state.{EdgeBuildingState, VertexBuildingState}
 
 private[soc] class LongestRoadOps [Res, BOARD, VB <: Coproduct, EB <: Coproduct]
 (board: BOARD, edgeBuildingMap: EdgeBuildingState[EB], vertexBuildingMap: VertexBuildingState[VB])

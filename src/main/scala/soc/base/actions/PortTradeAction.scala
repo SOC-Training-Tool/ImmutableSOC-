@@ -3,12 +3,11 @@ package soc.base.actions
 import game.GameAction
 import shapeless.{::, HNil}
 import soc.base.PortTradeMove
-import soc.base.state.Bank
-import soc.base.state.ops._
-import soc.inventory.ResourceInventories
-import soc.inventory.Transactions.PerfectInfo
+import soc.core.ResourceInventories
+import soc.core.Transactions.PerfectInfo
+import soc.core.state.Bank
+import soc.core.state.ops.BankInvOps
 import util.DependsOn
-
 
 object PortTradeAction {
 

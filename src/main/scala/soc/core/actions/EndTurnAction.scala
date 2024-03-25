@@ -1,10 +1,10 @@
-package soc.base.actions
+package soc.core.actions
 
 import game.GameAction
 import shapeless.{::, HNil}
-import soc.base.EndTurnMove
-import soc.base.state.Turn
-import soc.base.state.ops.TurnOps
+import soc.core.EndTurnMove
+import soc.core.state.Turn
+import soc.core.state.ops.TurnOps
 
 object EndTurnAction {
 

@@ -4,7 +4,9 @@ import game.{ActionExtension, GameMoveResult}
 import shapeless.{::, HNil}
 import soc.base.PlayKnightMove
 import soc.base.state.ops._
-import soc.base.state.{LargestArmyPlayer, PlayerArmyCount, PlayerPoints}
+import soc.base.state.{LargestArmyPlayer, PlayerArmyCount}
+import soc.core.state.PlayerPoints
+import soc.core.state.ops.PointsOps
 import util.DependsOn
 
 object LargestArmyExtension {

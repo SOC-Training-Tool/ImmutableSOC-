@@ -1,7 +1,24 @@
-package soc.base.actions
+package soc.core
 
 import shapeless.Coproduct
-import soc.board.{Edge, Vertex}
+
+case class Vertex(node: Int)
+
+case class Edge(v1: Vertex, v2: Vertex) {
+
+  def contains(v: Vertex): Boolean = v == v1 || v == v2
+
+  override def canEqual(a: Any): Boolean = a.isInstanceOf[Edge]
+
+  override def equals(that: Any): Boolean = that match {
+    case e@Edge(ev1, ev2) =>
+      e.canEqual(this) &&
+        (ev1 == v1 && ev2 == v2) || (ev2 == v1 && ev1 == v2)
+    case _ => false
+  }
+
+  override def hashCode: Int = (v1.node * v1.node) + (v2.node * v2.node)
+}
 
 sealed trait Hex[+Res] {
   val getResourceAndNumber: Option[(Res, Int)]

@@ -1,14 +1,12 @@
 package soc.base.actions.developmentcards
 
-import game.{ActionExtension, GameAction, PerfectInformationGameMove}
+import game.{ActionExtension, GameAction}
 import shapeless.ops.coproduct
 import shapeless.{::, Coproduct, HNil}
 import soc.base.{PerfectInfoBuyDevelopmentCardMoveResult, PlayPointMove, state}
-import soc.base.state.PlayerPoints
-import soc.base.state.ops.PointsOps
-import soc.core
-import soc.inventory.{DevTransactions, DevelopmentCardInventories, ResourceInventories}
-import util.DependsOn
+import soc.core.DevelopmentCardInventories
+import soc.core.state.ops.PointsOps
+import soc.core.state.{PlayerPoints, Turn}
 
 case object Point
 
@@ -17,10 +15,10 @@ object PlayPointAction {
   def apply[Dev <: Coproduct, DevInv[_]]
   (implicit dev: DevelopmentCardInventories[Dev, DevInv],
    inject: coproduct.Inject[Dev, Point.type],
-  ): GameAction[PlayPointMove, DevInv[Dev] :: state.Turn :: PlayerPoints :: HNil] = {
+  ): GameAction[PlayPointMove, DevInv[Dev] :: Turn :: PlayerPoints :: HNil] = {
     GameAction[PlayPointMove, PlayerPoints :: HNil] { case (move, state) =>
       state.incrementPointForPlayer(move.player)
-    }.extend(PlayDevelopmentCardActionExtension[PlayPointMove, Dev, Point.type, DevInv](_.player, Point)).apply()
+    }.extend(PlayDevelopmentCardActionExtension[PlayPointMove, Dev, Point.type, DevInv](Point))
   }
 
   def extension[Dev <: Coproduct](implicit selector: coproduct.Selector[Dev, Point.type]) = {

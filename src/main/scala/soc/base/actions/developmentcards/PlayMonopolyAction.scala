@@ -4,10 +4,10 @@ import game.{GameAction, InventorySet}
 import shapeless.ops.coproduct
 import shapeless.{::, Coproduct, HNil}
 import soc.base.PlayMonopolyMoveResult
-import soc.base.state.{Bank, Turn}
-import soc.inventory.ResourceInventories.ResourceInventoriesOp
-import soc.inventory.Transactions.{Gain, Lose}
-import soc.inventory.{DevelopmentCardInventories, ResourceInventories, Transactions}
+import soc.core.ResourceInventories.ResourceInventoriesOp
+import soc.core.Transactions.{Gain, Lose}
+import soc.core.state.Turn
+import soc.core.{DevelopmentCardInventories, ResourceInventories, Transactions}
 import util.DependsOn
 
 case object Monopoly
@@ -29,6 +29,6 @@ object PlayMonopolyAction {
       dep.updateWith[ResInv[Res]](state)(_.update(
         lose :+ Coproduct[Transactions.PerfectInfo[Res]](Gain(move.player, totalLost))
       ))
-    }.extend(PlayDevelopmentCardActionExtension[PlayMonopolyMoveResult[Res], Dev, Monopoly.type, DevInv](_.player, Monopoly)).apply()
+    }.extend(PlayDevelopmentCardActionExtension[PlayMonopolyMoveResult[Res], Dev, Monopoly.type, DevInv](Monopoly))
   }
 }

@@ -1,12 +1,11 @@
 package soc
 
+
 import game.{InventorySet, StateInitializer}
 import shapeless.{:+:, ::, CNil, Coproduct, HList, HNil}
-import soc.board.{Edge, Vertex}
+import soc.core.ResourceInventories
 import soc.core.Resources._
-import soc.inventory.ResourceInventories
 import util.DependsOn
-
 package object core {
 
   case object Wood
@@ -77,4 +76,6 @@ package object core {
   object EdgeBuilding {
     val ROAD = Coproduct[EdgeBuilding](Road)
   }
+
+
 }

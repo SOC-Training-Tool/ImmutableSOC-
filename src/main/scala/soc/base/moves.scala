@@ -1,31 +1,11 @@
 package soc.base
 
-import game.{GameMove, GameMoveResult, InventorySet, PerfectInfoMoveResult, PerfectInformationGameMove}
-import soc.board.{Edge, Vertex}
-
-case class BuildCityMove(player: Int, vertex: Vertex) extends PerfectInformationGameMove[BuildCityMove]
-
-case class BuildRoadMove(player: Int, edge: Edge) extends PerfectInformationGameMove[BuildRoadMove]
-
-case class BuildSettlementMove(player: Int, vertex: Vertex) extends PerfectInformationGameMove[BuildSettlementMove]
-
-case class EndTurnMove(player: Int) extends PerfectInformationGameMove[EndTurnMove]
-
-case class InitialPlacementMove(vertex: Vertex, edge: Edge, first: Boolean, player: Int) extends PerfectInformationGameMove[InitialPlacementMove]
-
-case class DiscardMove[II](player: Int, set: InventorySet[II, Int]) extends PerfectInformationGameMove[DiscardMove[II]]
+import game._
+import soc.core.{Edge, Vertex}
 
 case class PlayerSteal[R](victim: Int, resource: R)
 
 case class PortTradeMove[II](player: Int, give: InventorySet[II, Int], get: InventorySet[II, Int]) extends PerfectInformationGameMove[PortTradeMove[II]]
-
-case class RollDiceMove(player: Int) extends GameMove
-
-case class RollDiceMoveResult(player: Int, result: Int) extends GameMoveResult {
-  override type A = RollDiceMove
-
-  override def move: A = RollDiceMove(player)
-}
 
 case class RobberMove(player: Int, robberHexId: Int, victim: Option[Int]) extends GameMove
 
@@ -43,7 +23,7 @@ case class PerfectInfoRobberMoveResult[II](player: Int, robberHexId: Int, steal:
 
   override def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, ImperfectInfoMoveResult] = playerIds.map { p =>
     val resource = steal.filter(s => player == p || player == s.victim).map(_.resource)
-    p -> RobberMoveResult[II](p, robberHexId, steal.map(s => PlayerSteal(s.victim, resource)))
+    p -> RobberMoveResult[II](player, robberHexId, steal.map(s => PlayerSteal(s.victim, resource)))
   }.toMap
 }
 
@@ -105,6 +85,6 @@ case class PlayMonopolyMoveResult[Res](player: Int, res: Res, cardsLost: Map[Int
 
 case class PlayPointMove(player: Int) extends PerfectInformationGameMove[PlayPointMove]
 
-case class PlayRoadBuilderMove(player: Int, edge1: Edge, edge2: Option[Edge])
+case class PlayRoadBuilderMove(player: Int, edge1: Edge, edge2: Option[Edge]) extends PerfectInformationGameMove[PlayRoadBuilderMove]
 
 case class PlayYearOfPlentyMove[Res](player: Int, c1: Res, c2: Res) extends PerfectInformationGameMove[PlayYearOfPlentyMove[Res]]

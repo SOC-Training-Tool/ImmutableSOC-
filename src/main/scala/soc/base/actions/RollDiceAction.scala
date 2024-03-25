@@ -3,11 +3,11 @@ package soc.base.actions
 import game.GameAction
 import shapeless.ops.coproduct
 import shapeless.{::, Coproduct, HNil}
-import soc.base.RollDiceMoveResult
+import soc.base.state.RobberLocation
 import soc.base.state.ops._
-import soc.base.state.{Bank, RobberLocation, VertexBuildingState}
-import soc.inventory.ResourceInventories
-import soc.inventory.Transactions.PerfectInfo
+import soc.core.Transactions.PerfectInfo
+import soc.core.state.{Bank, VertexBuildingState}
+import soc.core.{ResourceInventories, RollDiceMoveResult, SOCBoard}
 import util.DependsOn
 
 object RollDiceAction {

@@ -2,16 +2,14 @@ package soc.base.actions.developmentcards
 
 import game._
 import shapeless.{::, HNil}
-import soc.base.state.ops._
-import soc.base.state.{Bank, Turn}
+import soc.base.state.DevelopmentCardDeckSize
 import soc.base.{BuyDevelopmentCardMoveResult, PerfectInfoBuyDevelopmentCardMoveResult}
-import soc.inventory.DevTransactions.{ImperfectInfoBuyCard, PerfectInfoBuyCard}
-import soc.inventory.DevelopmentCardInventories.DevelopmentCardInventoriesOps
-import soc.inventory.{BuyDevelopmentCard, DevelopmentCardInventories, ResourceInventories, Transactions}
+import soc.core.DevTransactions.{ImperfectInfoBuyCard, PerfectInfoBuyCard}
+import soc.core.DevelopmentCardInventories.DevelopmentCardInventoriesOps
+import soc.core.state.ops.{BankInvOps, TurnOps}
+import soc.core.state.{Bank, Turn}
+import soc.core.{BuyDevelopmentCard, DevelopmentCardInventories, ResourceInventories, Transactions}
 import util.DependsOn
-
-case class DevelopmentCardDeckSize(size: Int)
-
 object BuyDevelopmentCardAction {
 
   private def action[M, Res, ResInv[_], Dev, DevTrans, DevInv[_]]
@@ -50,9 +48,5 @@ object BuyDevelopmentCardAction {
     action[PerfectInfoBuyDevelopmentCardMoveResult[Dev], Res, ResInv, Dev, PerfectInfoBuyCard[Dev], DevInv](cost)(
       _.player,
       m => PerfectInfoBuyCard[Dev](m.card))
-  }
-
-  def initDevCardSize(size: Int) = new StateInitializer[DevelopmentCardDeckSize] {
-    override def apply(): DevelopmentCardDeckSize = DevelopmentCardDeckSize(size)
   }
 }

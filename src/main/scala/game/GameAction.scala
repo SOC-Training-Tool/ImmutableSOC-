@@ -15,22 +15,21 @@ trait GameAction[MOVE, STATE <: HList] {
     }
   }
 
-  def extend[S <: HList](update: ActionExtension[MOVE, S])(implicit union: hlist.Union[S, STATE]) = new ExtendApply[S, union.Out](this, update)
-
-  //  def extend[S <: HList](f: (MOVE, S) => S)(implicit union: hlist.Union[S, STATE]) = extend(new ActionExtension[MOVE, S] {
-  //    override def apply(move: MOVE, pre: STATE, post: STATE): STATE = f(move, post)
-  //  })
-
-  final case class ExtendApply[S <: HList, U <: HList](original: GameAction[MOVE, STATE], extension: ActionExtension[MOVE, S]) {
-    def apply(dummy: Boolean = false)(implicit dep1: DependsOn[U, S], dep2: DependsOn[U, STATE]): GameAction[MOVE, U] = new GameAction[MOVE, U] {
-      override def applyMove[GAME_STATE <: HList](move: MOVE, state: GAME_STATE)(implicit dep: DependsOn[GAME_STATE, U]): GAME_STATE = {
-        implicit val depS: DependsOn[GAME_STATE, S] = dep.innerDependency[S]
-        implicit val depF: DependsOn[GAME_STATE, STATE] = dep.innerDependency[STATE]
-        val pre = depS.getAll(state)
-        depS.updateAll(original.applyMove[GAME_STATE](move, state))(d => extension.apply(move, pre, d))
+  final case class ExtendApply[S <: HList](original: GameAction[MOVE, STATE]) {
+    def apply[U <: HList](extension: ActionExtension[MOVE, S])(implicit union: hlist.Union.Aux[S, STATE, U], dep1: DependsOn[U, S], dep2: DependsOn[U, STATE]): GameAction[MOVE, U] = {
+      new GameAction[MOVE, U] {
+        override def applyMove[GAME_STATE <: HList](move: MOVE, state: GAME_STATE)(implicit dep: DependsOn[GAME_STATE, U]): GAME_STATE = {
+          implicit val depS: DependsOn[GAME_STATE, S] = dep.innerDependency[S]
+          implicit val depF: DependsOn[GAME_STATE, STATE] = dep.innerDependency[STATE]
+          val pre = depS.getAll(state)
+          depS.updateAll(original.applyMove[GAME_STATE](move, state))(d => extension.apply(move, pre, d))
+        }
       }
     }
   }
+
+  def extend[S <: HList] = ExtendApply[S](this)
+
 }
 
 object GameAction {

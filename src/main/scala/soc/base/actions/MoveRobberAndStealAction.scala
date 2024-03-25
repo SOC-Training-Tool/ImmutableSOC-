@@ -5,9 +5,9 @@ import shapeless.{::, Coproduct, HNil}
 import soc.base.state.RobberLocation
 import soc.base.state.ops.RobberStateOps
 import soc.base.{PerfectInfoRobberMoveResult, RobberMoveResult}
-import soc.inventory.ResourceInventories
-import soc.inventory.ResourceInventories.ResourceInventoriesOp
-import soc.inventory.Transactions._
+import soc.core.ResourceInventories
+import ResourceInventories.ResourceInventoriesOp
+import soc.core.Transactions._
 import util.DependsOn
 
 object MoveRobberAndStealAction {
