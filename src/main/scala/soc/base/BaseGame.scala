@@ -1,11 +1,10 @@
 package soc.base
 
 import game.ImmutableGame.InitializeOp
-import game.{GameMove, GameMoveResult, ImmutableGame, InventorySet, PerfectInfoMoveResult, PerfectInformationGameMove}
+import game.{ImmutableGame, InventorySet, PerfectInfoMoveResult}
 import shapeless.ops.coproduct
 import shapeless.ops.hlist.FillWith
 import shapeless.{:+:, ::, CNil, Coproduct, HList, HNil, Poly1}
-import soc.base.BaseGame.PerfectToImperfectMovesPoly
 import soc.base.actions._
 import soc.base.actions.build._
 import soc.base.actions.developmentcards._
@@ -100,19 +99,10 @@ object BaseGame {
     publicInfoBaseGame[ProbableInventories, PublicDevelopmentCards]
 
   object PerfectToImperfectMovesPoly extends Poly1 {
-    def toImperfect[P <: PerfectInfoMoveResult](p: P): P#ImperfectInfoMoveResult = p.getPerspectiveResults(Seq(-1)).head._2
-    implicit def robberMove[II]: Case.Aux[PerfectInfoRobberMoveResult[II], RobberMoveResult[II]] =
-      at(toImperfect[PerfectInfoRobberMoveResult[II]])
-    implicit def buyCard[II]: Case.Aux[PerfectInfoBuyDevelopmentCardMoveResult[II], BuyDevelopmentCardMoveResult[II]] =
-      at(toImperfect[PerfectInfoBuyDevelopmentCardMoveResult[II]])
-    implicit def playKnight[II]: Case.Aux[PerfectInfoPlayKnightResult[II], PlayKnightResult[II]] =
-      at(toImperfect[PerfectInfoPlayKnightResult[II]])
+    implicit def toImperfect[P <: PerfectInfoMoveResult]: PerfectToImperfectMovesPoly.Case.Aux[P, P#ImperfectInfoMoveResult] = at[P](_.getPerspectiveResults(Seq(-1)).head._2)
 
     implicit def rollDice: Case.Aux[RollDiceMoveResult, RollDiceMoveResult] = at[RollDiceMoveResult](identity)
 
-    implicit def playMonopoly[II]: Case.Aux[PlayMonopolyMoveResult[II], PlayMonopolyMoveResult[II]] = at(toImperfect[PlayMonopolyMoveResult[II]])
-
-    implicit def perfectInfoMove[M <: PerfectInformationGameMove[M]]: Case.Aux[M, M] = at(identity)
   }
 
   case class MoveTransformer[O <: Coproduct]

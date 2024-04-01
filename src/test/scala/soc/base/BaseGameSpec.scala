@@ -276,22 +276,6 @@ class BaseGameSpec extends FunSpec with Matchers {
     Coproduct[ImperfectInfoMoves](PlayPointMove(2)),
     Coproduct[ImperfectInfoMoves](PlayPointMove(3)))
 
-
   val publicResult = transformedMoves.foldLeft(initPublicInfoState) { case (s, m) => BaseGame.publicInfoBase(m, s)}
   println(publicResult.select[PlayerPoints])
-
-
-
-
-  //    RevealPoint,
-  //    EndTurnMove,
-  //    //2
-  //    RevealPoint,
-  //    EndTurnMove,
-  //    //3
-  //    RevealPoint,
-  //    EndTurnMove,
-  //    //0
-  //    RevealPoint,
-  //    EndTurnMove,
 }
