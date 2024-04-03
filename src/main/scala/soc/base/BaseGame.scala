@@ -116,7 +116,9 @@ object BaseGame {
     }
   }
 
-  def initGame[S <: HList](board: BaseBoard[Resource], bank: InventorySet[Resource, Int], devDeckSize: Int)(implicit fillWith: FillWith[InitializeOp.type, S], dep: DependsOn[S, BaseBoard[Resource] :: RobberLocation :: state.Bank[Resource] :: DevelopmentCardDeckSize :: HNil]): S = {
+  def initGame[S <: HList]
+  (board: BaseBoard[Resource], bank: InventorySet[Resource, Int], devDeckSize: Int)
+  (implicit fillWith: FillWith[InitializeOp.type, S], dep: DependsOn[S, BaseBoard[Resource] :: RobberLocation :: state.Bank[Resource] :: DevelopmentCardDeckSize :: HNil]): S = {
     val rl = RobberLocation(board.hexes.zipWithIndex.find(_._1.getResource.isEmpty).fold(0)(_._2))
     dep.updateAll(ImmutableGame.initialize[S])(_ => board :: rl :: state.Bank(bank) :: DevelopmentCardDeckSize(devDeckSize) :: HNil)
   }
