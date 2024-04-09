@@ -11,6 +11,8 @@ package object state {
 
   case class DevelopmentCardDeckSize(size: Int)
 
+  case class DevelopmentCardDeck[Dev](cards: List[Dev])
+
   case class SOCLongestRoadPlayer(player: Option[Int])
 
   object SOCLongestRoadPlayer {

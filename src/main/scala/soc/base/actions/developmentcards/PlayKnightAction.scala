@@ -5,12 +5,10 @@ import shapeless.ops.coproduct
 import shapeless.{::, Coproduct, HNil}
 import soc.base.actions.MoveRobberAndStealAction
 import soc.base.state.RobberLocation
-import soc.base.{PerfectInfoPlayKnightResult, PlayKnightResult}
+import soc.base.{Knight, PerfectInfoPlayKnightResult, PlayKnightResult}
 import soc.core.Transactions.{ImperfectInfo, PerfectInfo}
 import soc.core.state.Turn
 import soc.core.{DevelopmentCardInventories, ResourceInventories}
-
-case object Knight
 
 object PlayKnightAction {
 

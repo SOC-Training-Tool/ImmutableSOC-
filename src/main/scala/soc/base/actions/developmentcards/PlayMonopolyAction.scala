@@ -3,14 +3,12 @@ package soc.base.actions.developmentcards
 import game.{GameAction, InventorySet}
 import shapeless.ops.coproduct
 import shapeless.{::, Coproduct, HNil}
-import soc.base.PlayMonopolyMoveResult
+import soc.base.{Monopoly, PlayMonopolyMoveResult}
 import soc.core.ResourceInventories.ResourceInventoriesOp
 import soc.core.Transactions.{Gain, Lose}
 import soc.core.state.Turn
 import soc.core.{DevelopmentCardInventories, ResourceInventories, Transactions}
 import util.DependsOn
-
-case object Monopoly
 
 object PlayMonopolyAction {
 

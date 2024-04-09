@@ -11,7 +11,7 @@ import util.DependsOn
 
 object LargestArmyExtension {
 
-  def apply[M <: GameMoveResult.Aux[PlayKnightMove]] = {
+  def apply[R, M <: GameMoveResult.Aux[PlayKnightMove[R]]] = {
     new ActionExtension[M, LargestArmyPlayer :: PlayerArmyCount :: PlayerPoints :: HNil] {
 
       override def apply(move: M, pre: STATE, post: STATE): STATE = {

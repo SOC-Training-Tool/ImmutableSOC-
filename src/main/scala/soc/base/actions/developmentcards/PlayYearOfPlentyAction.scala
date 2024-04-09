@@ -3,13 +3,11 @@ package soc.base.actions.developmentcards
 import game.{GameAction, InventorySet}
 import shapeless.ops.coproduct
 import shapeless.{::, Coproduct, HNil}
-import soc.base.PlayYearOfPlentyMove
+import soc.base.{PlayYearOfPlentyMove, YearOfPlenty}
 import soc.core.state.ops.BankInvOps
 import soc.core.state.{Bank, Turn}
 import soc.core.{DevelopmentCardInventories, ResourceInventories, Transactions}
 import util.DependsOn
-
-case object YearOfPlenty
 
 object PlayYearOfPlentyAction {
 

@@ -1,13 +1,16 @@
 package soc.base
 
-import game.InventorySet
+import game.{ImmutableGame, InventorySet}
 import org.scalatest.{FunSpec, Matchers}
-import shapeless.Coproduct
-import soc.base.BaseGame.{DevelopmentCards, ImperfectInfoMoves, PerfectInfoMoves, PerfectInfoState, PublicInfoState}
-import soc.base.actions.developmentcards._
+import shapeless.{::, Coproduct, HNil}
+import soc.ToImperfectInfo
+import soc.base.DevelopmentCards._
+import soc.base.state._
+import soc.base.BaseGame._
 import soc.core.Resources._
 import soc.core._
-import soc.core.state.PlayerPoints
+import soc.core.state._
+import util.DependsOn.HListDependsOnOp
 
 
 class BaseGameSpec extends FunSpec with Matchers {
@@ -35,12 +38,12 @@ class BaseGameSpec extends FunSpec with Matchers {
       ResourceHex(WHEAT, 11))
   )
 
-  val initPerfectInfoState: PerfectInfoState =
-    BaseGame.initGame[PerfectInfoState](board, InventorySet(Map(WOOD -> 19, BRICK -> 19, SHEEP -> 19, WHEAT -> 19, ORE -> 19)), 25)
+  private val bank = InventorySet(Map(WOOD -> 19, BRICK -> 19, SHEEP -> 19, WHEAT -> 19, ORE -> 19))
+  private val devDeck = List(KNIGHT, POINT, KNIGHT, POINT, POINT, KNIGHT, KNIGHT, ROAD_BUILDER, POINT, KNIGHT, MONOPOLY, YEAR_OF_PLENTY, YEAR_OF_PLENTY, KNIGHT, KNIGHT, KNIGHT, ROAD_BUILDER, MONOPOLY, KNIGHT, KNIGHT, KNIGHT, POINT, KNIGHT, KNIGHT, KNIGHT)
+  private val robberLocation = RobberLocation(10)
 
-  val initPublicInfoState: PublicInfoState =
-    BaseGame.initGame[PublicInfoState](board, InventorySet(Map(WOOD -> 19, BRICK -> 19, SHEEP -> 19, WHEAT -> 19, ORE -> 19)), 25)
-
+  val initPerfectInfoState: PerfectInfoState = ImmutableGame.initialize[PerfectInfoState].replaceAll(board :: Bank(bank) :: DevelopmentCardDeck(devDeck) :: robberLocation :: HNil)
+  val initPublicInfoState: PublicInfoState = ImmutableGame.initialize[PublicInfoState].replaceAll(board :: Bank(bank) :: DevelopmentCardDeckSize(devDeck.size) :: robberLocation :: HNil)
 
   val testMoveResults: List[PerfectInfoMoves] = List(
     Coproduct[PerfectInfoMoves](InitialPlacementMove(Vertex(41), Edge(Vertex(40), Vertex(41)), true, 0)),
@@ -62,27 +65,27 @@ class BaseGameSpec extends FunSpec with Matchers {
     Coproduct[PerfectInfoMoves](EndTurnMove(2)),
     // 3
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(3, 4)),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(3, Coproduct[DevelopmentCards](Knight))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(3, KNIGHT)),
     Coproduct[PerfectInfoMoves](EndTurnMove(3)),
     // 0
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(0, 9)),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(0, Coproduct[DevelopmentCards](Point))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(0, POINT)),
     Coproduct[PerfectInfoMoves](BuildRoadMove(0, Edge(Vertex(17), Vertex(40)))),
     Coproduct[PerfectInfoMoves](EndTurnMove(0)),
     // 1
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(1, 8)),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(1, Coproduct[DevelopmentCards](Knight))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(1, KNIGHT)),
     Coproduct[PerfectInfoMoves](EndTurnMove(1)),
     // 2
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(2, 9)),
     Coproduct[PerfectInfoMoves](PortTradeMove(2, ResourceSet(WOOD, WOOD, WOOD, WOOD), ResourceSet(ORE))),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(2, Coproduct[DevelopmentCards](Point))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(2, POINT)),
     Coproduct[PerfectInfoMoves](BuildRoadMove(2, Edge(Vertex(24), Vertex(45)))),
     Coproduct[PerfectInfoMoves](EndTurnMove(2)),
     // 3
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(3, 7)),
     Coproduct[PerfectInfoMoves](PerfectInfoRobberMoveResult(3, 9, Some(PlayerSteal(3, BRICK)))),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(3, Coproduct[DevelopmentCards](Point))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(3, POINT)),
     Coproduct[PerfectInfoMoves](BuildRoadMove(3, Edge(Vertex(1), Vertex(2)))),
     Coproduct[PerfectInfoMoves](EndTurnMove(3)),
     // 0
@@ -103,7 +106,7 @@ class BaseGameSpec extends FunSpec with Matchers {
     Coproduct[PerfectInfoMoves](EndTurnMove(3)),
     // 0
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(0, 10)),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(0, Coproduct[DevelopmentCards](Knight))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(0, KNIGHT)),
     Coproduct[PerfectInfoMoves](EndTurnMove(0)),
     // 1
     Coproduct[PerfectInfoMoves](PerfectInfoPlayKnightResult(PerfectInfoRobberMoveResult(1, 0, Some(PlayerSteal(3, WOOD))))),
@@ -136,7 +139,7 @@ class BaseGameSpec extends FunSpec with Matchers {
     // 1
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(1, 11)),
     Coproduct[PerfectInfoMoves](BuildSettlementMove(1, Vertex(50))),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(1, Coproduct[DevelopmentCards](Knight))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(1, KNIGHT)),
     Coproduct[PerfectInfoMoves](EndTurnMove(1)),
     // 2
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(2, 5)),
@@ -150,7 +153,7 @@ class BaseGameSpec extends FunSpec with Matchers {
     Coproduct[PerfectInfoMoves](EndTurnMove(3)),
     // 0
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(0, 10)),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(0, Coproduct[DevelopmentCards](RoadBuilder))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(0, ROAD_BUILDER)),
     Coproduct[PerfectInfoMoves](EndTurnMove(0)),
     // 1
     Coproduct[PerfectInfoMoves](PerfectInfoPlayKnightResult(PerfectInfoRobberMoveResult(1, 9, Some(PlayerSteal(2, WHEAT))))),
@@ -186,7 +189,7 @@ class BaseGameSpec extends FunSpec with Matchers {
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(1, 5)),
     Coproduct[PerfectInfoMoves](BuildCityMove(1, Vertex(34))),
     Coproduct[PerfectInfoMoves](PortTradeMove(1, ResourceSet(sh = 3), ResourceSet(wh = 1))),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(1, Coproduct[DevelopmentCards](Point))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(1, POINT)),
     Coproduct[PerfectInfoMoves](EndTurnMove(1)),
     // 2
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(2, 8)),
@@ -200,7 +203,7 @@ class BaseGameSpec extends FunSpec with Matchers {
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(0, 7)),
     Coproduct[PerfectInfoMoves](DiscardMove(1, ResourceSet(or = 3, br = 1))),
     Coproduct[PerfectInfoMoves](PerfectInfoRobberMoveResult(0, 3, Some(PlayerSteal(1, ORE)))),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(0, Coproduct[DevelopmentCards](Knight))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(0, KNIGHT)),
     Coproduct[PerfectInfoMoves](EndTurnMove(0)),
     // 1
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(1, 5)),
@@ -213,7 +216,7 @@ class BaseGameSpec extends FunSpec with Matchers {
     // 3
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(3, 5)),
     Coproduct[PerfectInfoMoves](PortTradeMove(3, ResourceSet(or = 3), ResourceSet(wh = 1))),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(3, Coproduct[DevelopmentCards](Monopoly))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(3, MONOPOLY)),
     Coproduct[PerfectInfoMoves](EndTurnMove(3)),
     // 0
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(0, 10)),
@@ -224,9 +227,9 @@ class BaseGameSpec extends FunSpec with Matchers {
     // 1
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(1, 5)),
     Coproduct[PerfectInfoMoves](PortTradeMove(1, ResourceSet(sh = 3), ResourceSet(wh = 1))),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(1, Coproduct[DevelopmentCards](YearOfPlenty))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(1, YEAR_OF_PLENTY)),
     Coproduct[PerfectInfoMoves](PortTradeMove(1, ResourceSet(br = 3), ResourceSet(wh = 1))),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(1, Coproduct[DevelopmentCards](YearOfPlenty))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(1, YEAR_OF_PLENTY)),
     Coproduct[PerfectInfoMoves](EndTurnMove(1)),
     // 2
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(2, 8)),
@@ -248,7 +251,7 @@ class BaseGameSpec extends FunSpec with Matchers {
     // 1
     Coproduct[PerfectInfoMoves](RollDiceMoveResult(1, 10)),
     Coproduct[PerfectInfoMoves](PlayYearOfPlentyMove(1, ORE, WHEAT)),
-    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(1, Coproduct[DevelopmentCards](Knight))),
+    Coproduct[PerfectInfoMoves](PerfectInfoBuyDevelopmentCardMoveResult(1, KNIGHT)),
     Coproduct[PerfectInfoMoves](BuildRoadMove(1, Edge(Vertex(35), Vertex(49)))),
     Coproduct[PerfectInfoMoves](BuildRoadMove(1, Edge(Vertex(34), Vertex(35)))),
     Coproduct[PerfectInfoMoves](EndTurnMove(1)),
@@ -269,13 +272,12 @@ class BaseGameSpec extends FunSpec with Matchers {
   val perfectResult = testMoveResults.foldLeft(initPerfectInfoState) { case (s, m) => BaseGame.perfectInfoBaseGame(m, s) }
   println(perfectResult.select[PlayerPoints])
 
-  val transform = BaseGame.MoveTransformer()
-  val transformedMoves = testMoveResults.map(transform.apply) ::: List(
+  val transformedMoves = testMoveResults.map(implicitly[ToImperfectInfo[ImperfectInfoMoves, PerfectInfoMoves]].apply) ::: List(
     Coproduct[ImperfectInfoMoves](PlayPointMove(0)),
     Coproduct[ImperfectInfoMoves](PlayPointMove(1)),
     Coproduct[ImperfectInfoMoves](PlayPointMove(2)),
     Coproduct[ImperfectInfoMoves](PlayPointMove(3)))
 
-  val publicResult = transformedMoves.foldLeft(initPublicInfoState) { case (s, m) => BaseGame.publicInfoBase(m, s)}
+  val publicResult = transformedMoves.foldLeft(initPublicInfoState) { case (s, m) => BaseGame.publicInfoBase(m, s) }
   println(publicResult.select[PlayerPoints])
 }

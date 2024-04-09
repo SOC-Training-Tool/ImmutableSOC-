@@ -7,32 +7,32 @@ case class PlayerSteal[R](victim: Int, resource: R)
 
 case class PortTradeMove[II](player: Int, give: InventorySet[II, Int], get: InventorySet[II, Int]) extends PerfectInformationGameMove[PortTradeMove[II]]
 
-case class RobberMove(player: Int, robberHexId: Int, victim: Option[Int]) extends GameMove
+case class RobberMove[Res](player: Int, robberHexId: Int, victim: Option[Int]) extends GameMove
 
-case class RobberMoveResult[II](player: Int, robberHexId: Int, steal: Option[PlayerSteal[Option[II]]]) extends GameMoveResult {
-  override type A = RobberMove
+case class RobberMoveResult[Res](player: Int, robberHexId: Int, steal: Option[PlayerSteal[Option[Res]]]) extends GameMoveResult {
+  override type A = RobberMove[Res]
 
-  override def move: RobberMove = RobberMove(player, robberHexId, steal.map(_.victim))
+  override def move: RobberMove[Res] = RobberMove(player, robberHexId, steal.map(_.victim))
 }
 
-case class PerfectInfoRobberMoveResult[II](player: Int, robberHexId: Int, steal: Option[PlayerSteal[II]]) extends PerfectInfoMoveResult {
-  override type A = RobberMove
-  override type ImperfectInfoMoveResult = RobberMoveResult[II]
+case class PerfectInfoRobberMoveResult[Res](player: Int, robberHexId: Int, steal: Option[PlayerSteal[Res]]) extends PerfectInfoMoveResult {
+  override type A = RobberMove[Res]
+  override type ImperfectInfoMoveResult = RobberMoveResult[Res]
 
   override def move: A = RobberMove(player, robberHexId, steal.map(_.victim))
 
   override def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, ImperfectInfoMoveResult] = playerIds.map { p =>
     val resource = steal.filter(s => player == p || player == s.victim).map(_.resource)
-    p -> RobberMoveResult[II](player, robberHexId, steal.map(s => PlayerSteal(s.victim, resource)))
+    p -> RobberMoveResult[Res](player, robberHexId, steal.map(s => PlayerSteal(s.victim, resource)))
   }.toMap
 }
 
-case class BuyDevelopmentCardMove(player: Int) extends GameMove
+case class BuyDevelopmentCardMove[Card](player: Int) extends GameMove
 
 case class BuyDevelopmentCardMoveResult[Card](player: Int, card: Option[Card]) extends GameMoveResult {
-  override type A = BuyDevelopmentCardMove
+  override type A = BuyDevelopmentCardMove[Card]
 
-  override def move: BuyDevelopmentCardMove = BuyDevelopmentCardMove(player)
+  override def move: BuyDevelopmentCardMove[Card] = BuyDevelopmentCardMove(player)
 }
 
 case class PerfectInfoBuyDevelopmentCardMoveResult[Card](player: Int, card: Card) extends PerfectInfoMoveResult {
@@ -45,19 +45,19 @@ case class PerfectInfoBuyDevelopmentCardMoveResult[Card](player: Int, card: Card
     }.toMap
   }
 
-  override type A = BuyDevelopmentCardMove
+  override type A = BuyDevelopmentCardMove[Card]
 
-  override def move: BuyDevelopmentCardMove = BuyDevelopmentCardMove(player)
+  override def move: BuyDevelopmentCardMove[Card] = BuyDevelopmentCardMove(player)
 }
 
-case class PlayKnightMove(inner: RobberMove) extends GameMove {
+case class PlayKnightMove[Res](inner: RobberMove[Res]) extends GameMove {
   val player = inner.player
 }
 
 case class PlayKnightResult[Res](inner: RobberMoveResult[Res]) extends GameMoveResult {
-  override type A = PlayKnightMove
+  override type A = PlayKnightMove[Res]
 
-  override def move: PlayKnightMove = PlayKnightMove(inner.move)
+  override def move: PlayKnightMove[Res] = PlayKnightMove(inner.move)
 }
 
 case class PerfectInfoPlayKnightResult[Res](inner: PerfectInfoRobberMoveResult[Res]) extends PerfectInfoMoveResult {
@@ -66,9 +66,9 @@ case class PerfectInfoPlayKnightResult[Res](inner: PerfectInfoRobberMoveResult[R
   override def getPerspectiveResults(playerIds: Seq[Int]): Map[Int, PlayKnightResult[Res]] =
     inner.getPerspectiveResults(playerIds).view.mapValues(PlayKnightResult.apply).toMap
 
-  override type A = PlayKnightMove
+  override type A = PlayKnightMove[Res]
 
-  override def move: PlayKnightMove = PlayKnightMove(inner.move)
+  override def move: PlayKnightMove[Res] = PlayKnightMove(inner.move)
 }
 
 case class PlayMonopolyMove[Res](player: Int, res: Res) extends GameMove

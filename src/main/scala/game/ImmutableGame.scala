@@ -33,9 +33,6 @@ class ImmutableGameBuilder[Moves <: Coproduct, State <: HList, Actions0 <: HList
    zipper: coproduct.ZipWith.Aux[GameAction[M, S] :: Actions0, M :+: Moves, (M, GameAction[M, S]) :+: MoveActions0]
   ) = new ImmutableGameBuilder[M :+: Moves, union.Out, GameAction[M, S] :: Actions0, (M, GameAction[M, S]) :+: MoveActions0](action :: actionList)
 
-  final case class MergeApply[M <: Coproduct, S <: HList, A <: HList, MA <: Coproduct](a: A) {
-    def apply(dummy: Boolean = false)(implicit mergeZipper: coproduct.ZipWith.Aux[A, M, MA]) = new ImmutableGameBuilder[M, S, A, MA](a)
-  }
 
   def merge[M <: Coproduct, MO <: Coproduct, S <: HList, SO <: HList, A <: HList, AO <: HList, MA <: Coproduct, MAO <: Coproduct]
   (builder: ImmutableGameBuilder[M, S, A, MA])
@@ -65,14 +62,14 @@ trait StateInitializer[T] extends shapeless.DepFn0 {
 
 object ImmutableGame {
 
-  def initialize[S <: HList](implicit fillWith: FillWith[InitializeOp.type, S]): S = HList.fillWith[S](InitializeOp)
-
   def builder = new ImmutableGameBuilder[CNil, HNil, HNil, CNil](HNil)
 
   object FolderOp extends Poly1 {
     implicit def moveCase[M, MS <: HList, S <: HList](implicit dep: DependsOn[S, MS]): Case.Aux[((M, GameAction[M, MS]), S), S] =
       at { case ((move, action), state) => action.applyMove[S](move, state) }
   }
+
+  def initialize[S <: HList](implicit fw: FillWith[InitializeOp.type, S]): S = HList.fillWith[S](InitializeOp)
 
   object InitializeOp extends Poly0 {
 
@@ -88,7 +85,6 @@ object ImmutableGame {
       gen.from(c.apply())
 
     }
-
   }
 }
 

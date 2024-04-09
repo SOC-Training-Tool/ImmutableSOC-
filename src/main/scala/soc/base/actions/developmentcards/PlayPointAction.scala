@@ -3,12 +3,10 @@ package soc.base.actions.developmentcards
 import game.{ActionExtension, GameAction}
 import shapeless.ops.coproduct
 import shapeless.{::, Coproduct, HNil}
-import soc.base.{PerfectInfoBuyDevelopmentCardMoveResult, PlayPointMove, state}
+import soc.base.{PerfectInfoBuyDevelopmentCardMoveResult, PlayPointMove, Point, state}
 import soc.core.DevelopmentCardInventories
 import soc.core.state.ops.PointsOps
 import soc.core.state.{PlayerPoints, Turn}
-
-case object Point
 
 object PlayPointAction {
 

@@ -3,14 +3,12 @@ package soc.base.actions.developmentcards
 import game.GameAction
 import shapeless.ops.coproduct
 import shapeless.{:+:, ::, CNil, Coproduct, HNil}
-import soc.base.PlayRoadBuilderMove
+import soc.base.{PlayRoadBuilderMove, RoadBuilder}
 import soc.base.state.ops.BuildRoadStateOps
 import soc.core.state.{EdgeBuildingState, Turn}
 import soc.core.{DevelopmentCardInventories, Road}
 import util.DependsOn
 import util.opext.Embedder
-
-case object RoadBuilder
 
 object PlayRoadBuilderAction {
 
